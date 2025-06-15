@@ -31,6 +31,9 @@ enum TokenType {
 
   // literály
   TK_NAME, TK_NUMBER,
+  
+  // poslední token, značí konec souboru
+  TK_EOF
 };
 
 
@@ -285,6 +288,8 @@ std::vector<Token> lex(std::string source) {
     if (!t.has_value()) { break; }
     ts.push_back(t.value());
   }
+
+  ts.push_back(TK_EOF);
 
   return ts;
 }
