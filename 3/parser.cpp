@@ -40,13 +40,14 @@ struct TokenScanner {
     return false;
   }
 
-  void consume(TokenType type, string &message) {
+  //ta funkce co používáme pro "o krok dál" smazání tokenu, hází výjimku když nesedí typy
+  void consume(TokenType type, const std::string &message) {
     if (!match(type)) {
-      error(message)
+      error(message);
     }
   }
 
-  void error(string &message) {
+  void error(const std::string &message) {
     if (isAtEnd()) {
       std::cerr << "Error at the end: ";
     } else {
