@@ -289,7 +289,7 @@ std::vector<Token> lex(std::string source) {
     ts.push_back(t.value());
   }
 
-  ts.push_back(TK_EOF);
+//   ts.push_back(TK_EOF); //to jsem sem přidal já, nemyslím si, že je potřeba
 
   return ts;
 }
