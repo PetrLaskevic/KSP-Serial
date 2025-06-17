@@ -297,6 +297,8 @@ Expr comparison(TokenScanner &ts) {
   return left;
 }
 
+std::string prefixPrint(Expr& node);
+
 Expr assignment(TokenScanner &ts) {
   // a == b = c by bylo docela crazy
   //ve finále comparison bude porovnávat čísla, co by mělo dělat true=c ?
@@ -318,7 +320,10 @@ Expr assignment(TokenScanner &ts) {
 
 Expr expression(TokenScanner &ts) {
   Expr a = assignment(ts);
-  ts.consume(TK_SEMICOLON, "Expected ';' after expression.");
+  // ts.consume(TK_SEMICOLON, "Expected ';' after expression.");
+  // if(!ts.match(TK_SEMICOLON)){
+  //   ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
+  // }
   return a;
 }
 
@@ -409,32 +414,22 @@ std::string prefixPrint(Expr& node){
   std::string op = allOPToString(node);
   //leaves
   if(node.type == ET_LITERAL || node.type == ET_NAME){
-    std::cout << node.type << "\n";
     return node.value;
   }
   if(node.type == ET_VAR){
     return "VAR(" + node.value + ")";
   }
-  //can have any number of children
-  if(node.type == ET_BLOCK){
-    op = op + "(";
-    for(Expr child: node.children){
-      op += " " + prefixPrint(child) + ",";
-    }
-    //remove the last ","
-    op.pop_back(); 
-    op += ")";
-    return op;
+  //any number of children: ET_BLOCK
+  //expressions: 2 children (binary operators) or 1 child (unary operators)
+  op = op + "(";
+  for(Expr child: node.children){
+    op += " " + prefixPrint(child) + ",";
   }
-  //for expressions - which have one child (unary operators) or two children (binary operators)
-  if(node.children.size() == 2){
-    op = op + "(" + prefixPrint(node.children[0]) + ", " + prefixPrint(node.children[1]) + ")";
-    return op;
-  }
-  if(node.children.size() == 1){
-    op = op + "(" + prefixPrint(node.children[0]) + ")";
-    return op;
-  }
+  //remove the last ","
+  op.pop_back(); 
+  op += ")";
+  return op;
+
   std::cerr << "unhandled node in prefixPrint\n";
 }
 
@@ -460,7 +455,7 @@ int main(){
   std::cout << '\n';
 
   TokenScanner tokenScanner = TokenScanner(ts);
-  std::cout << tokenScanner.isAtEnd() << "\n";
+  // std::cout << tokenScanner.isAtEnd() << "\n";
   // auto ast = expression(tokenScanner);
   // std::cout << printExprTree(ast) << "\n";
   auto ast = parse(tokenScanner);
