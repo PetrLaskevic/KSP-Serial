@@ -228,7 +228,19 @@ Expr addition(TokenScanner &ts) {
   while(ts.check(TK_MINUS)) {
     //požrání operátoru
     ts.advance();
-    Expr right = unary(ts);
+    //když je tady unary, tak to nemůžu fungovat na tento případ: "10-12/6;"
+      //s multiplication ok: "10-12/6;" => BLOCK( SUBST( 10, DIV( 12, 6)))
+    //zároveň unary tady bylo instalováno, protože by jinak + expandoval doprava => protože jsem nechal implementaci + zprava asociativni
+    // => řešením bude předělat + na to aby byl zleva asociativní, aby práve mohl kooperovar s tímhle:
+    //příklad pro testování 10-12+6 = který teda shodou náhod s multpilication totálně rozbije
+    //"10+12-6" však ok => BLOCK( ADD( 10, SUBST( 12, 6)))
+    //"10-12+6" => Error on token PLUS() at 0:5: Unexpected token
+    //není to protože nechci volat rovnou multiplication ale i další addition?
+    //(call multiplication už nikdy addition nezavolá)
+    //no a s addition se to už nikdy nezavolá správně:
+    //"10-12+6" =>  BLOCK( SUBST( 10, ADD( 12, 6)))
+    Expr right = addition(ts); //unary(ts);
+    // Expr right = multiplication(ts); //works ok for "10-12/6 * 3" => BLOCK( SUBST( 10, MUL( DIV( 12, 6), 3)))
     //leva asociativita se dělá tímhle
     //vezme se dosavadní všechno, dá se to do levého syna, 
     //pravý syn se udělá unary (aby se něco zpracovalo, ale nedošlo k dalšímu callu addition a expansi - + = tím by vznikla pravá asociativita)
@@ -313,6 +325,11 @@ Expr assignment(TokenScanner &ts) {
 
   if (ts.match(TK_EQUAL)) {
     Expr right = assignment(ts);
+    // var neco=-!0+25*3+3-5-1/6;
+    std::cout << "ooooooooooooooooooooo\n";
+    std::cout << prefixPrint(left) << "\n";
+    std::cout << prefixPrint(right) << "\n";
+    std::cout << "ooooooooooooooooooooo\n";
     return Expr(ET_ASSIGN, {left, right});
   }
   return left;
@@ -438,7 +455,8 @@ int main(){
   // "var neco = 3" => BLOCK(VAR(neco), ASSIGN(neco, 3))
   // "(a <= (b != c)) == d;" => BLOCK(EQ(LESS_EQ(a, NOT_EQ(b, c)), d))
   // "var a = 1 + 2 * 9 / -3;var b = 0;" => BLOCK(ASSIGN(VAR(a), ADD(1, DIV(MUL(2, 9), UN_MIN(3)))), ASSIGN(VAR(b), 0))
-  std::string source = "var b = 0;var neco=3;neco=5;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  // "var neco=-!0-1/6;" "var neco=0-12/6;"
+  std::string source = "10-12+6"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
