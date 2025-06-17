@@ -242,7 +242,17 @@ Expr addition(TokenScanner &ts) {
   //pokud pravý podstrom není, tak return jenom levý
   return left;
 }
-
+bool isEqualityOp(TokenType t){
+  switch(t){
+    case TK_GREATER: return true;
+    case TK_LESS: return true;
+    case TK_EQUAL_EQUAL: return true;
+    case TK_NOT_EQUAL: return true;
+    case TK_GREATER_EQUAL: return true;
+    case TK_LESS_EQUAL: return true;
+    default: return false;
+  }
+}
 Expr comparison(TokenScanner &ts) {
   Expr left = addition(ts);
   if(ts.match(TK_EQUAL_EQUAL)){
@@ -255,10 +265,17 @@ Expr comparison(TokenScanner &ts) {
     //(TK_EQUAL_EQUAL a NAME(c)), se spustí další statement(),
     //kde to nebude na nic matchovat a probublá se to do primary, které hodí výjimku
     //přesto ale můžu být zdvořilejší, a říct užívateli, v čem je problém
-    if(ts.peek().type == TK_EQUAL_EQUAL){
+    if(ts.peek().type == TK_EQUAL_EQUAL || ts.peek().type == TK_LESS_EQUAL){
       ts.error("Nepodporujeme řetězení porovnávacích operátorů bez explicitního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
     }
     return Expr(ET_EQUAL, {left, right});
+  }
+  if(ts.match(TK_LESS_EQUAL)){
+    Expr right = addition(ts);
+    if(ts.peek().type == TK_EQUAL_EQUAL || ts.peek().type == TK_LESS_EQUAL){
+      ts.error("Nepodporujeme řetězení porovnávacích operátorů bez explicitního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
+    }
+    return Expr(ET_LESS_EQUAL, {left, right});
   }
   return left;
 }
@@ -399,7 +416,7 @@ int main(){
   // "3-5+2" //"-1+1+2+1-2-3"
   //stredniky a vic stamentu navzdory parse nejsou podporovany - ta funkce se zda se o to vubec nestara var neco=3;neco=5
   // BLOCK(VAR(neco), ASSIGN(neco, 3))
-  std::string source = "a == (b == c);"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "a <= (b == c);"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
