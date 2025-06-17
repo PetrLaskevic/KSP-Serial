@@ -211,45 +211,15 @@ Expr multiplication(TokenScanner &ts) {
 Expr addition(TokenScanner &ts) {
   std::cout << "Dostali jsme se sem\n";
   Expr left = multiplication(ts);
-  //mělo by být ekvivalentní ts.match(TK_PLUS)
-  if(ts.check(TK_PLUS)){
+
+  while(ts.check(TK_PLUS) || ts.check(TK_MINUS)){
+    Token operation = ts.peek();
     ts.advance();
-    Expr right = addition(ts);
-    return Expr(ET_ADD, {left, right});
-  }
-  //tohle právě nemůžeme udělat, protože nám z vstupu 1 - 2 - 3 udělá 1 - (2-3)
-  // => tady podobně jako u dělení musíme udělat zleva asociativní
-  // (násobení a sčítání nemuselo = to je i zleva i zprava)
-  // if(ts.check(TK_MINUS)){
-  //   ts.advance();
-  //   Expr right = addition(ts);
-  //   return Expr(ET_SUBTRACT, {left, right});
-  // }
-  while(ts.check(TK_MINUS)) {
-    //požrání operátoru
-    ts.advance();
-    //když je tady unary, tak to nemůžu fungovat na tento případ: "10-12/6;"
-      //s multiplication ok: "10-12/6;" => BLOCK( SUBST( 10, DIV( 12, 6)))
-    //zároveň unary tady bylo instalováno, protože by jinak + expandoval doprava => protože jsem nechal implementaci + zprava asociativni
-    // => řešením bude předělat + na to aby byl zleva asociativní, aby práve mohl kooperovar s tímhle:
-    //příklad pro testování 10-12+6 = který teda shodou náhod s multpilication totálně rozbije
-    //"10+12-6" však ok => BLOCK( ADD( 10, SUBST( 12, 6)))
-    //"10-12+6" => Error on token PLUS() at 0:5: Unexpected token
-    //není to protože nechci volat rovnou multiplication ale i další addition?
-    //(call multiplication už nikdy addition nezavolá)
-    //no a s addition se to už nikdy nezavolá správně:
-    //"10-12+6" =>  BLOCK( SUBST( 10, ADD( 12, 6)))
-    Expr right = addition(ts); //unary(ts);
-    // Expr right = multiplication(ts); //works ok for "10-12/6 * 3" => BLOCK( SUBST( 10, MUL( DIV( 12, 6), 3)))
-    //leva asociativita se dělá tímhle
-    //vezme se dosavadní všechno, dá se to do levého syna, 
-    //pravý syn se udělá unary (aby se něco zpracovalo, ale nedošlo k dalšímu callu addition a expansi - + = tím by vznikla pravá asociativita)
-    //pak se udělá nový kořen tohodle podstromum, s operací substract, s tímhle levým synem (předchozí všechno podstrom) a pravým synem dalším prostě **číslem** (akorát s !! -- zpracováním)
-    //a přiřadí se to do levého podstromu dalšího kroku této operace
-    //takže cyklus může pokračovat
-    //protože unary sežere jedno číslo a neeexpanduje donekonečna, tak je tady právě ten while(ts.check(TK_MINUS),
-    //který zajišťuje, že parsování tokenů do stromu neskončí
-    left = Expr(ET_SUBTRACT, {left, right});
+    Expr right = multiplication(ts);
+    ExprType type = (operation.type == TK_PLUS)
+                    ? ET_ADD
+                    : ET_SUBTRACT;
+    left = Expr(type, {left, right});
   }
   //pokud pravý podstrom není, tak return jenom levý
   return left;
