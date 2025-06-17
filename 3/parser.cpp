@@ -291,6 +291,7 @@ std::string unaryExprOperatorToString(Expr& node){
   }
 }
 
+//vypise strom infixove
 std::string printExprTree(Expr& node){
   if(node.type == ET_LITERAL){
     return node.value;
@@ -316,9 +317,47 @@ std::string printExprTree(Expr& node){
   return "UNHANDLED TOKEN";
 }
 
+std::string allOPToString(Expr& node){
+  ExprType t = node.type;
+  switch (t) {
+    // binární operátory
+    case ET_MULTIPLY: return "MUL";
+    case ET_DIVIDE: return "DIV";
+    case ET_ADD: return "ADD";
+    case ET_SUBTRACT: return "SUBST";
+    case ET_LESS: return "LESS";
+    case ET_LESS_EQUAL: return "LESS_EQ";
+    case ET_GREATER: return "MORE";
+    case ET_GREATER_EQUAL: return "MORE_EQ";
+    case ET_EQUAL: return "EQ";
+    case ET_NOT_EQUAL: return "NOT_EQ";
+    case ET_ASSIGN: return "ASSIGN";
+    case ET_NEGATE: return "UN_MIN"; //unary minus
+    case ET_NOT: return "NOT";
+    case ET_BLOCK: return "BLOCK";
+    //nic není pravda
+    default: return "";
+  }
+}
+//vypise strom prefixove, jakoby vznikl sekvenci techto jakoby function callu na zasobniku
+std::string prefixPrint(Expr& node){
+  std::string op = allOPToString(node);
+  if(node.type == ET_LITERAL || node.type == ET_NAME){
+    return node.value;
+  }
+  if(node.children.size() == 2){
+    op = op + "(" + prefixPrint(node.children[0]) + ", " + prefixPrint(node.children[1]) + ")";
+    return op;
+  }
+  if(node.children.size() == 1){
+    op = op + "(" + prefixPrint(node.children[0]) + ")";
+    return op;
+  }
+}
+
 int main(){
   // "3-5+2"
-  std::string source = "1-2-3"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "-1+1+2+1-2-3"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
@@ -339,5 +378,7 @@ int main(){
   // auto ast = expression(tokenScanner);
   // std::cout << printExprTree(ast) << "\n";
   auto ast = parse(tokenScanner);
+  std::cout << "PUVODNI___________ " << source << "_________\n";
   std::cout << printExprTree(ast) << "\n";
+  std::cout << prefixPrint(ast) << "\n";
 }
