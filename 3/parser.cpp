@@ -255,6 +255,13 @@ Expr comparison(TokenScanner &ts) {
 Expr assignment(TokenScanner &ts) {
   // a == b = c by bylo docela crazy
   //ve finále comparison bude porovnávat čísla, co by mělo dělat true=c ?
+  // => je to zajímavý side effect toho, jak je to napsaný
+  // => pro intended použití přiřazení do proměnné se to tím comparisonem a dál prostě probublá 
+  //    (protože nic nebude matchovat, tak to bude vracet left s outputem dalšího callu)
+  //    až se to dostane do primary, kde se už vyhodnocují listy (třeba literals, a použítí proměnné někde (var + 3)
+  //=> takže TLDR: comparison se provolá do primary, kde se naparsuje proměnná, to bude levá stana, ke které budeme přiřazovat
+  //a tak dostaneme ASSIGN(VAR(neco), UN_MIN(2)) pro var neco = -2
+  //                ASSIGN(VAR(neco), promenna)  pro var neco = promenna
   Expr left = comparison(ts);
 
   if (ts.match(TK_EQUAL)) {
@@ -265,34 +272,10 @@ Expr assignment(TokenScanner &ts) {
   return left;
 }
 
-// Expr variable(TokenScanner &ts){
-//   //declaration
-//   //zatím povolím jednu na řádku, není to tady binární operátor, abychom to mohli chainit
-//   if(ts.match(TK_VAR)){
-//     if(ts.check(TK_NAME)){
-//       std::string varName = ts.peek().value;
-//       Expr left = Expr(ET_VAR, varName);
-//       //PROSTE BY TO TAM CHTĚLO NĚJAK NARVAT TEN ASSIGNMENT, S TÍM LEFTEM JAKO VAR DEKLARACÍ
-//       // return left;
-
-//       // if(ts.match(TK_EQUAL)){
-//       //   Expr right = expression(ts);
-//       //   return Expr(ET_ASSIGN, {left, right});
-//       // }
-//     }
-//   }
-
-//   //asi DOPLNIT ASSIGNMENT DO UZ DEFINOVANE PROMENNE (TO UZ MOZNA ASSIGNMENT ACTUALLY UMI OHANDLIT)
-//     // => TOKEN ET_VAR JE TOMU JEDNO, TAK tohle uvnitr `Expr left = comparison(ts);` to handluje tak, ze to deleguje na dalsi funkce,
-//     // ze se to provola az do primary, kde se nam vrati Expr(ET_NAME, token.value);
-//   return assignment(ts);
-
-
-// }
-
 Expr expression(TokenScanner &ts) {
   return assignment(ts);
 }
+
 std::string binaryExprOperatorToString(Expr& node){
   ExprType t = node.type;
   switch (t) {
@@ -324,7 +307,7 @@ std::string unaryExprOperatorToString(Expr& node){
   }
 }
 
-//vypise strom infixove
+//vypise strom infixove, podporuje pouze aritmeticke vyrazy
 std::string printExprTree(Expr& node){
   if(node.type == ET_LITERAL){
     return node.value;
@@ -400,7 +383,7 @@ int main(){
   // "3-5+2" //"-1+1+2+1-2-3"
   //stredniky a vic stamentu navzdory parse nejsou podporovany - ta funkce se zda se o to vubec nestara var neco=3;neco=5
   // BLOCK(VAR(neco), ASSIGN(neco, 3))
-  std::string source = "var 2"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "var neco = -2"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
