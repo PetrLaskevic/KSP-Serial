@@ -266,9 +266,10 @@ Expr assignment(TokenScanner &ts) {
 
   if (ts.match(TK_EQUAL)) {
     Expr right = assignment(ts);
+    ts.consume(TK_SEMICOLON, "Expected ';' after variable declaration.");
     return Expr(ET_ASSIGN, {left, right});
   }
-
+  ts.consume(TK_SEMICOLON, "Expected ';' after expression.");
   return left;
 }
 
@@ -383,7 +384,7 @@ int main(){
   // "3-5+2" //"-1+1+2+1-2-3"
   //stredniky a vic stamentu navzdory parse nejsou podporovany - ta funkce se zda se o to vubec nestara var neco=3;neco=5
   // BLOCK(VAR(neco), ASSIGN(neco, 3))
-  std::string source = "var neco = -2"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "var neco"; //"var neco = 3" //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
