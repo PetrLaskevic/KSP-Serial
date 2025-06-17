@@ -187,6 +187,9 @@ Expr multiplication(TokenScanner &ts) {
   while (ts.check(TK_STAR) || ts.check(TK_SLASH)) {
     Token op = ts.peek(); //uložíme si další token
     ts.advance(); //smažeme ho ze seznamu neprojitých tokenů
+    //volání unary místo expression neudělá další call do multiplication
+    // => ale zároveň zpracuje unární operátory, které "mají přednost"
+    //tam se ta expansion může dít, !!!!!!!1 je naprosto validní
     Expr right = unary(ts);
     ExprType type = (op.type == TK_STAR)
                         ? ET_MULTIPLY
@@ -206,8 +209,29 @@ Expr addition(TokenScanner &ts) {
     Expr right = addition(ts);
     return Expr(ET_ADD, {left, right});
   }
-  //kdyz dalsi token neni +, tak ho v additionu urcite nemame co zrat
-  // ts.advance();
+  //tohle právě nemůžeme udělat, protože nám z vstupu 1 - 2 - 3 udělá 1 - (2-3)
+  // => tady podobně jako u dělení musíme udělat zleva asociativní
+  // (násobení a sčítání nemuselo = to je i zleva i zprava)
+  // if(ts.check(TK_MINUS)){
+  //   ts.advance();
+  //   Expr right = addition(ts);
+  //   return Expr(ET_SUBTRACT, {left, right});
+  // }
+  while(ts.check(TK_MINUS)) {
+    //požrání operátoru
+    ts.advance();
+    Expr right = unary(ts);
+    //leva asociativita se dělá tímhle
+    //vezme se dosavadní všechno, dá se to do levého syna, 
+    //pravý syn se udělá unary (aby se něco zpracovalo, ale nedošlo k dalšímu callu addition a expansi - + = tím by vznikla pravá asociativita)
+    //pak se udělá nový kořen tohodle podstromum, s operací substract, s tímhle levým synem (předchozí všechno podstrom) a pravým synem dalším prostě **číslem** (akorát s !! -- zpracováním)
+    //a přiřadí se to do levého podstromu dalšího kroku této operace
+    //takže cyklus může pokračovat
+    //protože unary sežere jedno číslo a neeexpanduje donekonečna, tak je tady právě ten while(ts.check(TK_MINUS),
+    //který zajišťuje, že parsování tokenů do stromu neskončí
+    left = Expr(ET_SUBTRACT, {left, right});
+  }
+  //pokud pravý podstrom není, tak return jenom levý
   return left;
 }
 
@@ -286,11 +310,15 @@ std::string printExprTree(Expr& node){
     std::cout << "unary operator " << unaryExprOperatorToString(node) << "\n";
     return "[" + unaryExprOperatorToString(node) + printExprTree(node.children[0]) + "]";
   }
+  if(node.type == ET_BLOCK){
+    return printExprTree(node.children[0]);
+  }
   return "UNHANDLED TOKEN";
 }
 
 int main(){
-  std::string source = "3-5"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  // "3-5+2"
+  std::string source = "1-2-3"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
@@ -308,6 +336,8 @@ int main(){
 
   TokenScanner tokenScanner = TokenScanner(ts);
   std::cout << tokenScanner.isAtEnd() << "\n";
-  auto ast = expression(tokenScanner);
+  // auto ast = expression(tokenScanner);
+  // std::cout << printExprTree(ast) << "\n";
+  auto ast = parse(tokenScanner);
   std::cout << printExprTree(ast) << "\n";
 }
