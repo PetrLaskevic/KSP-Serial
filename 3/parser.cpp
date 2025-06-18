@@ -1,6 +1,7 @@
 
 
 #include "token.hpp"
+#include "stack.hpp"
 #include <cctype>
 #include <vector>
 
@@ -426,6 +427,34 @@ std::string prefixPrint(Expr& node){
   return op;
 
   std::cerr << "unhandled node in prefixPrint\n";
+}
+
+
+void emit(std::vector<Instruction> &program,
+          Expr &expr) {
+  for (auto& operand : expr.children) {
+    emit(program, operand);
+  }
+
+  switch (expr.type) {
+    case ET_ADD: {
+      program.push_back(Instruction{.op = OP_ADD});
+    } break;
+    case ET_MULTIPLY: {
+      program.push_back(Instruction{.op = OP_MUL});
+    } break;
+    case ET_SUBTRACT: {
+      program.push_back(Instruction{.op = OP_SUB});
+    } break;
+    // ...
+    case ET_LITERAL: {
+      // Tady konečně naparsujeme číslo ze stringu
+      // :)
+      int value = std::stoi(expr.value);
+      program.push_back(Instruction{
+          .op = OP_PUSH, .value = value});
+    } break;
+  }
 }
 
 int main(){
