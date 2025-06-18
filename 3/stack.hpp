@@ -32,6 +32,7 @@ void println(format_string<Args...> fmt, Args&&... args){
 enum Opcode {
   OP_PRINT,
   OP_PUSH,
+  OP_POP,
 
   OP_LOAD,
   OP_STORE,
@@ -108,6 +109,13 @@ void interpret(
     case OP_PUSH: {
       //da numerickou hodnotu (treba 8) na zasobnik
       zasobnik.push_back(get<int>(ins.value));
+    } break;
+
+    case OP_POP: {
+      if(zasobnik.size() < 1){
+        cout << "Pozor, nelze pprovést OP_POP když je zásobník prázdný!\n";
+      }
+      zasobnik.pop_back();
     } break;
 
     case OP_ADD: {
