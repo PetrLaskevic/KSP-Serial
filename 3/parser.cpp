@@ -121,6 +121,7 @@ Expr unary(TokenScanner &ts);
 
 Expr printStatement(TokenScanner &ts) {
   Expr value = expression(ts);
+  std::cout << "printStatement called\n";
   ts.consume(TK_SEMICOLON,
              "Expected ';' after value.");
   return Expr(ET_PRINT, {value});
@@ -446,7 +447,21 @@ void emit(std::vector<Instruction> &program,
     case ET_SUBTRACT: {
       program.push_back(Instruction{.op = OP_SUB});
     } break;
-    // ...
+    case ET_NEGATE: {
+      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
+      emit(program, expr.children[0]); //emit(operand) část
+      program.push_back(Instruction{.op = OP_SUB});
+    } break;
+    case ET_PRINT: {
+      //to už by chtělo celý další call na emit, 
+      //protože v definici printStatement vzniknuvší 
+      // program.push_back();
+      Expr printedExpression = expr.children[0];
+      //hopefully ten výraz dá něco na zásobník
+      emit(program, printedExpression);
+      //protože instrukce OP_PRINT z něj hodnotu sebere a vypíše ji
+      program.push_back(Instruction{.op = OP_PRINT});
+    } break;
     case ET_LITERAL: {
       // Tady konečně naparsujeme číslo ze stringu
       // :)
@@ -454,6 +469,38 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{
           .op = OP_PUSH, .value = value});
     } break;
+    case ET_NAME: {
+      //Expr(ET_NAME, token.value); má .value string token.value svého jména
+      //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
+      //a pak její hodnotu dosadí na zásobník
+      program.push_back(Instruction{.op = OP_LOAD, .value = expr.value});
+    } break;
+    case ET_VAR: {
+      //tohle by handlovalo var a; = to by muselo mít nějakou default hodnotu
+      // std::cerr << "Deklaraci bez inicializace (bez přiřazení default hodnoty) nechceme.\n Použijte var a = 3; místo var a;\n";
+      //rekurzivně se tam emit dostane i když celý výraz je var a = 3;
+      //DEFAULT HODNOTA BUDE 0
+      program.push_back(Instruction{.op = OP_PUSH, .value=0});
+      program.push_back(Instruction{.op = OP_STORE, .value = expr.value });
+    } break;
+    case ET_ASSIGN: {
+      //tady je ten moment, kdy zamítneme levou stranu cokoliv než proměnnou (for now)
+      Expr leftSide = expr.children[0];
+      if(leftSide.type != ET_VAR){
+        std::cerr << "Přiřadit umíme jen k proměnné!\n";
+        return;
+      }
+      //leftSide Expr(ET_VAR, varName); má .value = varName = název proměnné
+      //rightSide je výraz napravo od rovnítka, z čehož bude sekvence instrukcí
+      //hopefully, když se vyhodnotí, tak na zásobníku bude hodnota
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+
+      
+      //tu proměnnou naopak definujeme, dáme ji do slovníku
+      //pomocí OP_STORE, která ale čeká hodnotu ze zásobníku, která tam bude po vyhodnocení pravého výrazu
+      program.push_back(Instruction{.op = OP_STORE, .value = leftSide.value});
+    }
   }
 }
 
@@ -464,7 +511,8 @@ int main(){
   // "var a = 1 + 2 * 9 / -3;var b = 0;" => BLOCK(ASSIGN(VAR(a), ADD(1, DIV(MUL(2, 9), UN_MIN(3)))), ASSIGN(VAR(b), 0))
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
-  std::string source = "a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
+  std::string source = "var a = 3+2;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
@@ -487,5 +535,17 @@ int main(){
   auto ast = parse(tokenScanner);
   std::cout << "PUVODNI___________ " << source << "_________\n";
   std::cout << printExprTree(ast) << "\n";
-  std::cout << prefixPrint(ast) << "\n";
+  std::cout << "\n" << prefixPrint(ast) << "\n";
+  std::cout << "__________________________________________\n";
+  std::cout << "\nProgram output:\n\n";
+
+  //seznam instrukcí, co lze vykonat
+  std::vector<Instruction> program = {};
+  emit(program, ast);
+  //stack, na kterém to actually poběží
+  std::vector<int> stack = {};
+  //proměnné, které to bude mít k dispozici, žijí zde
+  std::unordered_map<std::string, int> vars;
+  interpret(program, stack, vars);
+  cout << "Hello world\n"; //abych si mohl dát breakpoint za interpret
 }

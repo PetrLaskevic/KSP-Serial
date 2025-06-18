@@ -34,7 +34,7 @@ enum Opcode {
   OP_PUSH,
   OP_POP,
 
-  OP_LOAD,
+  OP_LOAD, //da hodnotu promenne .value (treba "x") na zasobnik
   OP_STORE,
 
   OP_ADD,
@@ -102,6 +102,10 @@ void interpret(
     case OP_STORE: {
       //da hodnotu ze zasobniku (pop) do promenne .value (treba "x")
       //=popuje do promenne specifikovane v .value hodnotu z zasobniku (=pop zasobniku)
+      if(zasobnik.size() == 0){
+        std::cerr << "Na zásobníku není žádná hodnota, OP_STORE do proměnné nelze provést!\n";
+        return;
+      }
       promenne[get<string>(ins.value)] = zasobnik.back();
       zasobnik.pop_back();
     } break;
