@@ -394,6 +394,10 @@ std::string allOPToString(Expr& node){
     case ET_NEGATE: return "UN_MIN"; //unary minus
     case ET_NOT: return "NOT";
     case ET_BLOCK: return "BLOCK";
+    case ET_PRINT: return "PRINT";
+    case ET_VAR: return "VAR_DECL";
+    case ET_LITERAL: return "LITERAL";
+    case ET_NAME: return "VAR_USE";
     //nic není pravda
     default: return "";
   }
@@ -403,7 +407,7 @@ std::string prefixPrint(Expr& node){
   std::string op = allOPToString(node);
   //leaves
   if(node.type == ET_LITERAL || node.type == ET_NAME){
-    return node.value;
+    return "LIT(" + node.value + ")";
   }
   if(node.type == ET_VAR){
     return "VAR(" + node.value + ")";
@@ -433,29 +437,39 @@ std::string prefixPrint(Expr& node){
 
 void emit(std::vector<Instruction> &program,
           Expr &expr) {
-  for (auto& operand : expr.children) {
-    emit(program, operand);
-  }
+    //the issue is if this is enabled the literalll cases in expressions
+    //var a = 9 / -3;
+    // run 2 times if emit() in negate is commented out
+    for (auto& operand : expr.children) {
+      std::cout << "operand: " << allOPToString(operand) << "\n"; 
+      emit(program, operand);
+    }
 
   switch (expr.type) {
     case ET_ADD: {
+      std::cout << "ADD\n";
       program.push_back(Instruction{.op = OP_ADD});
     } break;
     case ET_MULTIPLY: {
+      std::cout << "MUL\n";
       program.push_back(Instruction{.op = OP_MUL});
     } break;
     case ET_DIVIDE: {
+      std::cout << "DIV\n";
       program.push_back(Instruction{.op = OP_DIV});
     } break;
     case ET_SUBTRACT: {
+      std::cout << "SUB\n";
       program.push_back(Instruction{.op = OP_SUB});
     } break;
     case ET_NEGATE: {
+      std::cout << "NEG\n";
       program.push_back(Instruction{.op = OP_PUSH, .value = 0});
-      emit(program, expr.children[0]); //emit(operand) část
+      // emit(program, expr.children[0]); //emit(operand) část
       program.push_back(Instruction{.op = OP_SUB});
     } break;
     case ET_PRINT: {
+      std::cout << "PRI\n";
       //to už by chtělo celý další call na emit, 
       //protože v definici printStatement vzniknuvší 
       // program.push_back();
@@ -469,16 +483,19 @@ void emit(std::vector<Instruction> &program,
       // Tady konečně naparsujeme číslo ze stringu
       // :)
       int value = std::stoi(expr.value);
+      std::cout << "LITERALLLLLL " << value << "\n";
       program.push_back(Instruction{
           .op = OP_PUSH, .value = value});
     } break;
     case ET_NAME: {
+      std::cout << "NAM\n";
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
       //a pak její hodnotu dosadí na zásobník
       program.push_back(Instruction{.op = OP_LOAD, .value = expr.value});
     } break;
     case ET_VAR: {
+      std::cout << "VAR\n";
       //tohle by handlovalo var a; = to by muselo mít nějakou default hodnotu
       // std::cerr << "Deklaraci bez inicializace (bez přiřazení default hodnoty) nechceme.\n Použijte var a = 3; místo var a;\n";
       //rekurzivně se tam emit dostane i když celý výraz je var a = 3;
@@ -487,6 +504,7 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_STORE, .value = expr.value });
     } break;
     case ET_ASSIGN: {
+      std::cout << "ASSI\n";
       //tady je ten moment, kdy zamítneme levou stranu cokoliv než proměnnou (for now)
       Expr leftSide = expr.children[0];
       if(leftSide.type != ET_VAR){
@@ -515,7 +533,7 @@ int main(){
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
-  std::string source = "var a = 3+2;print a/a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "var a = 9 / -3;"; //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
