@@ -308,9 +308,9 @@ Expr assignment(TokenScanner &ts) {
 Expr expression(TokenScanner &ts) {
   Expr a = assignment(ts);
   // ts.consume(TK_SEMICOLON, "Expected ';' after expression.");
-  // if(!ts.match(TK_SEMICOLON)){
-  //   ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
-  // }
+  if(!ts.match(TK_SEMICOLON)){
+    ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
+  }
   return a;
 }
 
@@ -409,12 +409,20 @@ std::string prefixPrint(Expr& node){
   //any number of children: ET_BLOCK
   //expressions: 2 children (binary operators) or 1 child (unary operators)
   op = op + "(";
+  std::string separator = ",";
+  if(node.type == ET_BLOCK){
+    op += "\n";
+    separator = ";\n";
+  }
   for(Expr child: node.children){
-    op += " " + prefixPrint(child) + ",";
+    op += " " + prefixPrint(child) + separator;
   }
   //remove the last ","
-  op.pop_back(); 
-  op += ")";
+  op.pop_back();
+  if(node.type == ET_BLOCK){
+    op += "\n";
+  }
+  op += " )";
   return op;
 
   std::cerr << "unhandled node in prefixPrint\n";
@@ -426,7 +434,8 @@ int main(){
   // "(a <= (b != c)) == d;" => BLOCK(EQ(LESS_EQ(a, NOT_EQ(b, c)), d))
   // "var a = 1 + 2 * 9 / -3;var b = 0;" => BLOCK(ASSIGN(VAR(a), ADD(1, DIV(MUL(2, 9), UN_MIN(3)))), ASSIGN(VAR(b), 0))
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
-  std::string source = "10-12+6"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
+  std::string source = "a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
