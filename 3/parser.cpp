@@ -122,8 +122,11 @@ Expr unary(TokenScanner &ts);
 Expr printStatement(TokenScanner &ts) {
   Expr value = expression(ts);
   std::cout << "printStatement called\n";
-  ts.consume(TK_SEMICOLON,
-             "Expected ';' after value.");
+  //vykomentováno, protože už to řeším v expression
+  //než jsem to vykomentoval, bylo nutné print a;; (jinde stačil 1 středník :D)
+  //řešit to v expression mi umožňuje povolit a; nebo 3+2; výrazy
+  // ts.consume(TK_SEMICOLON,
+  //            "Expected ';' after value.");
   return Expr(ET_PRINT, {value});
 }
 
@@ -535,7 +538,7 @@ int main(){
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
-  std::string source = "var a = 9 / -3;print a;;"; //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = "var a = 9 / -3;print a;a;3+2;"; //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
