@@ -122,19 +122,26 @@ Expr unary(TokenScanner &ts);
 Expr printStatement(TokenScanner &ts) {
   Expr value = expression(ts);
   std::cout << "printStatement called\n";
-  //vykomentováno, protože už to řeším v expression
-  //než jsem to vykomentoval, bylo nutné print a;; (jinde stačil 1 středník :D)
-  //řešit to v expression mi umožňuje povolit a; nebo 3+2; výrazy
-  // ts.consume(TK_SEMICOLON,
-  //            "Expected ';' after value.");
+  //vykomentováno, protože už to řeším v o úroveň výš v statement
+  //to je lepší než to řešit 2x: jednou v statement a jednou tady
+  //řešit to v expression rozbíjelo nested () statementyy (po TK_LPAREN další expression() call)
   return Expr(ET_PRINT, {value});
 }
 
+std::string prefixPrint(Expr& node);
+
 Expr statement(TokenScanner &ts) {
+  Expr a(ET_PRINT, "f"); //něco do konstruktoru
   if (ts.match(TK_PRINT)){
-    return printStatement(ts);
+    a = printStatement(ts);
+  }else{
+    a = expression(ts);
   }
-  return expression(ts);
+  //semicolon check na jednom miste, at uz je to call do expression nebo print statement
+  if(!ts.match(TK_SEMICOLON)){
+    ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
+  }
+  return a;
 }
 
 Expr parse(TokenScanner &ts) {
@@ -284,7 +291,6 @@ Expr comparison(TokenScanner &ts) {
   return left;
 }
 
-std::string prefixPrint(Expr& node);
 
 Expr assignment(TokenScanner &ts) {
   // a == b = c by bylo docela crazy
@@ -311,12 +317,9 @@ Expr assignment(TokenScanner &ts) {
 }
 
 Expr expression(TokenScanner &ts) {
-  Expr a = assignment(ts);
-  // ts.consume(TK_SEMICOLON, "Expected ';' after expression.");
-  if(!ts.match(TK_SEMICOLON)){
-    ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
-  }
-  return a;
+  //expressions can be nested (TK_LPAREN causes an expression call)
+  //so, the semicolon check was put one level up, in statement
+  return assignment(ts);
 }
 
 std::string binaryExprOperatorToString(Expr& node){
@@ -538,7 +541,15 @@ int main(){
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
-  std::string source = "var a = 9 / -3;print a;a;3+2;"; //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  std::string source = 
+  "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  "print a;"
+  "var b = 0;"
+  //prostě dát tu kontrolu středníku jinam
+  "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
+  "print (a = 0) >= a;"
+  "print !(b > (b = 0));";
+
   std::vector<Token> ts = lex(source);
 
   std::cout << "\ncelkove nalexovano:\n";
