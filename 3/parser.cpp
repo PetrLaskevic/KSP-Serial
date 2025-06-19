@@ -592,19 +592,62 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_LT});
       program.push_back(Instruction{.op = OP_NOT});
     } break;
-    // case ET_GREATER: {
-    //   //kdybych jenom provedl to stejné jako ET_LESS a pak na to dal OP_NOT
-    //   //tak bych dostal >= což je dobré pro ET_GREATER_EQUAL, ale není to dobré pro ET_GREATER
-    //   //=> jak pak rozeznat > od == že?
-    //   //možná by řešení bylo jet přes OP_DUP
-    //   //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
-    //   Expr leftSide = expr.children[0];
-    //   emit(program, leftSide);
-    //   //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
-    //   Expr rightSide = expr.children[1];
-    //   emit(program, rightSide);
+    case ET_GREATER: {
+      //Problém je, že mám jenom instrukce OP_LT, OP_EQ a OP_NOT
+      //a taky, že v rámci výrazu (expression), který řeším, můžu mít přiřazení do proměnné.
+      //Tedy nemůžu říct a < b takže b > a, a prostě prohodit pořadí callů emitu
+      //protože bych mohl mít (a = a+3) > a*2, kdy 1. musím vyhodnotit levou stranu a až pak pravou 
+      //(kde už je nová hodnota z levé strany)
+      //(myslel jsem si, že můj dřívejší zákaz řetězení (asociativity) logických operátorů mi pomůže, ale na tohle to nemá vliv)
+      //=> Právě kvůli těm přiřazením proměnných (a v budoucnu function callům) je v zadání to 
+          // "Zachovávejte pořadí vyhodnocení operandů zleva doprava. 
+          //Pokud potřebujete argumenty v opačném pořadí, musíte je prohodit nějak jinak"
+      // "Například můžete přiřadit do pomocných proměnných, jen pozor, aby jejich jména nekolidovala s něčím jiným."
+        //=> na úrovni instrukcí, to by šlo, ale musel bych si zakázat buď dva názvy proměnných pro uživatele (vyhrazeno pro toto)
+        //a nebo XOR swap s jednou
+      //já bych radši nezakazoval uživateli žádnou proměnnou, ALE ASI TO BEZ TOHO NEJDE (min 1 bych v kombinaci se swapem potřeboval)
+        //chtěl jsem provést:
+          //1.  ET_LESS a pak na to dal OP_NOT, tedy >=
+          //2. pak ověřit rovnost
+      
+      //chtěl jsem použít instrukci OP_DUP v kombinaci s mou OP_SWAP 
+      //(povoleno Standou, moje instrukce, která prohodí 2 věci na zásobníku)
+      //ALE ASI NEJDE:
+      //chtěl jsem dostat: (A = levá, B = pravá)
+      //A
+      //B
+      //A
+      //B
+      //kdy jednu dvojici by požralo >= a druhou !=, pak bych udělal && (to jde, OP_ADD a OP_EQ == 2)
+      //jenže duplikací si vyrobím 2 stejné hodnoty za sebou, které pak swapovat nemá smysl
+      //kdyby to byla duplikace posledních 2 hodnot, tak by to šlo, nebo swap nechávající horní hodnotu a swapující 2 pod tím
 
-    // } break;
+      //takže proměnné it is
+
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      program.push_back(Instruction{.op = OP_STORE, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+      program.push_back(Instruction{.op = OP_STORE, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"}); //:trollhroch: nemusím uživatele instruovat, ať se tomu jménu vyhne, _ v nzevech proměnných nepodporujeme (error při parsování)
+
+      //takže teď už je mám v proměnných, takže můžu provést (a >= b) && (a != b) pro a > b
+      // >=
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
+      program.push_back(Instruction{.op = OP_LT});
+      program.push_back(Instruction{.op = OP_NOT});
+      // !=
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
+      program.push_back(Instruction{.op = OP_EQ});
+      program.push_back(Instruction{.op = OP_NOT});
+      //teď mám výsledky, můžu &&
+      program.push_back(Instruction{.op = OP_ADD}); //1+1=2
+      program.push_back(Instruction{.op = OP_PUSH, .value = 2});
+      program.push_back(Instruction{.op = OP_EQ});
+    } break;
   } 
 }
 
@@ -618,14 +661,27 @@ int main(){
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
   "var a = -5;"
+  "var b = a - 1;"
   // "(a = 10) == a;"
   // "print (a = 10) == a;"
   "print a == 3;"
   "print a != 3;"
-  "print a >= -8;"
-  "print a >= -5;"
-  "print a >= a;"
-  "print a >= 3;";
+  "print a > -8;"
+  "print a > -5;"
+  "print a > a;"
+  "print a > 3;"
+  "print a > b;"
+  "print(a);"
+  //pro grafy f1(x): y = x+3 a f2(x): y = 2(x+3) platí f1>f2 od (-inf, -3)
+  "a = -2;" //2
+  "print((a = a+3) > a*2);"
+  //grafy f1(x): y = 2x a f2(x): y = x+3 platí f1<f2 pro od (-inf, +3)
+  //sjednocení, kdy platí oobjí je -4 a míň
+  //naopak kdy se výsledky liší je (-3, 3)
+  // v (-inf, -3) platí obojí a v (3, inf) neplatí nic
+  //takže -2 -1 0 1 2
+  "a = -2;" //2
+  "print((a*2) < (a = a+3));";
   // "print a == 3;";
   // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   // "print a;"
