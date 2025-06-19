@@ -632,21 +632,27 @@ void emit(std::vector<Instruction> &program,
       emit(program, rightSide);
       program.push_back(Instruction{.op = OP_STORE, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"}); //:trollhroch: nemusím uživatele instruovat, ať se tomu jménu vyhne, _ v nzevech proměnných nepodporujeme (error při parsování)
 
+      //stačilo by vlastně toto
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
+      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      program.push_back(Instruction{.op = OP_LT});
+      
+      //ale pro fun convoluted vec, co me napadlo jako prvni: 
       //takže teď už je mám v proměnných, takže můžu provést (a >= b) && (a != b) pro a > b
       // >=
-      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
-      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
-      program.push_back(Instruction{.op = OP_LT});
-      program.push_back(Instruction{.op = OP_NOT});
-      // !=
-      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
-      program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
-      program.push_back(Instruction{.op = OP_EQ});
-      program.push_back(Instruction{.op = OP_NOT});
-      //teď mám výsledky, můžu &&
-      program.push_back(Instruction{.op = OP_ADD}); //1+1=2
-      program.push_back(Instruction{.op = OP_PUSH, .value = 2});
-      program.push_back(Instruction{.op = OP_EQ});
+      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
+      // program.push_back(Instruction{.op = OP_LT});
+      // program.push_back(Instruction{.op = OP_NOT});
+      // // !=
+      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
+      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
+      // program.push_back(Instruction{.op = OP_EQ});
+      // program.push_back(Instruction{.op = OP_NOT});
+      // //teď mám výsledky, můžu &&
+      // program.push_back(Instruction{.op = OP_ADD}); //1+1=2
+      // program.push_back(Instruction{.op = OP_PUSH, .value = 2});
+      // program.push_back(Instruction{.op = OP_EQ});
     } break;
   } 
 }
