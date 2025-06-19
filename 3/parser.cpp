@@ -515,7 +515,10 @@ void emit(std::vector<Instruction> &program,
     case ET_ASSIGN: {
       //tady je ten moment, kdy zamítneme levou stranu cokoliv než proměnnou (for now)
       Expr leftSide = expr.children[0];
-      if(leftSide.type != ET_VAR){
+      if(
+        leftSide.type != ET_VAR && //var a = 3; přiřazení k deklaraci
+        leftSide.type != ET_NAME //a = 6; přiřazení k již deklarované proměnné
+      ){
         std::cerr << "Přiřadit umíme jen k proměnné!\n";
         return;
       }
@@ -541,14 +544,14 @@ int main(){
   // "var neco=-!0-1/6;" "var neco=0-12/6;"
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
-  std::string source = 
-  "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
-  "print a;"
-  "var b = 0;"
-  //prostě dát tu kontrolu středníku jinam
-  "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
-  "print (a = 0) >= a;"
-  "print !(b > (b = 0));";
+  std::string source = "var a = 3;a=6;print a;";
+  // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  // "print a;"
+  // "var b = 0;"
+  // //prostě dát tu kontrolu středníku jinam
+  // "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
+  // "print (a = 0) >= a;"
+  // "print !(b > (b = 0));";
 
   std::vector<Token> ts = lex(source);
 
