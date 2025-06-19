@@ -413,8 +413,11 @@ std::string allOPToString(Expr& node){
 std::string prefixPrint(Expr& node){
   std::string op = allOPToString(node);
   //leaves
-  if(node.type == ET_LITERAL || node.type == ET_NAME){
+  if(node.type == ET_LITERAL){
     return "LIT(" + node.value + ")";
+  }
+  if(node.type == ET_NAME){
+    return "NAM(" + node.value + ")";
   }
   if(node.type == ET_VAR){
     return "VAR(" + node.value + ")";
@@ -511,9 +514,19 @@ void emit(std::vector<Instruction> &program,
           .op = OP_PUSH, .value = value});
     } break;
     case ET_NAME: {
+      std::cout << "NAME\n";
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
       //a pak její hodnotu dosadí na zásobník
+    
+      //ne tohle neplní, že přiřazení vrací hodnotu, jenom umožňuje aby použití proměnné fungovalo třeba v b = 3 + a;
+      //ET_ASSIGN má děti: ET_NAME a ET_LITERAL (nebo výraz)
+      //a emit aby se to expandovalo volám jenom na to druhé dítě (pravou stranu)
+      //takže se k tomu ET_NAME jako levé straně v přiřazení nikdy nedostanem
+      //zároveň ofc, pokud ET_NAME bude napravo, tak musíme dát na stack hodnotu té proměnné
+      //ET_ASSIGN b = a; zavolá emit na a, takže tady se to dá na stack, a v ET_ASSIGN instrukcích za tím emit outputem se to sebere a přiřadí do b
+      //jenže specifikace chce, aby na stacku byla hodnota b 
+      //TLDR: obojí potřeba 
       program.push_back(Instruction{.op = OP_LOAD, .value = expr.value});
     } break;
     case ET_VAR: {
@@ -525,6 +538,7 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_STORE, .value = expr.value });
     } break;
     case ET_ASSIGN: {
+      std::cout << "ASSIGN\n";
       //tady je ten moment, kdy zamítneme levou stranu cokoliv než proměnnou (for now)
       Expr leftSide = expr.children[0];
       if(
@@ -533,6 +547,11 @@ void emit(std::vector<Instruction> &program,
       ){
         std::cerr << "Přiřadit umíme jen k proměnné!\n";
         return;
+      }
+      //teď když házíme výjimky na `a = 5` když předtím nebylo `var a` nebo `var a = 2`
+      //tak musíme v assignmentu než zkusíme LOAD tak nejdřív proměnnou deklarovat
+      if(leftSide.type == ET_VAR){
+        emit(program, leftSide);
       }
       //leftSide Expr(ET_VAR, varName); má .value = varName = název proměnné
       //rightSide je výraz napravo od rovnítka, z čehož bude sekvence instrukcí
@@ -543,6 +562,17 @@ void emit(std::vector<Instruction> &program,
       
       //tu proměnnou naopak definujeme, dáme ji do slovníku
       //pomocí OP_STORE, která ale čeká hodnotu ze zásobníku, která tam bude po vyhodnocení pravého výrazu
+      //=> Bylo by fajn, kdyby přiřazení do nedefinované proměnné vyhodilo chybu (za běhu).
+      //protože ale OP_STORE neví, jestli proměnná existuje, nebo ji vytváříme (OP_STORE voláme i z deklarace),
+      //tak bychom buď mohli udělat další op code pro deklaraci a upravit OP_STORE ať vypisuje error, když neexistuje
+      //a nebo upravit OP_LOAD (který v podobě z 1. dílu proměnnou vytvářel, když nebyla)
+      //=> šlo by hodit error tam, protože OP_LOAD nemá žádný pořádný způsob, jak předat, že selhal do téhle vrstvy
+      //(aniž bych musel zakazovat nějakou hodnotu co může být na zásobníku / zaváděl další "systémovou" proměnnou)
+      //navíc "kam" => vždyť tady instukce vytváříme, a interpret běží až potom
+      program.push_back(Instruction{.op = OP_LOAD, .value = leftSide.value});
+      //když bude load úspěšný, tak ok, když ne, tak ukončí interpret()
+      //=> pokud teda ještě program běží, tak LOAD přidal extra hodnotu na zásobník, kterou je třeba odebrat
+      program.push_back(Instruction{.op = OP_POP});
       program.push_back(Instruction{.op = OP_STORE, .value = leftSide.value});
       //v zadání chtějí: Přiřazení do proměnné vrací přiřazenou hodnotu, tak ji na zásobník znovu přidám
       program.push_back(Instruction{.op = OP_LOAD, .value = leftSide.value});
@@ -666,12 +696,19 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-    "var a = 1 + 2 * 9 / -3;"
-    "print a;" //-5
-    "var b = 0;"
-    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
-    "print (a = 0) >= a;" //1
-    "print !(b > (b = 0));"; //1
+    // "var a = 1 + 2 * 9 / -3;"
+    // "print a;" //-5
+    // "var b = 0;"
+    // "var a;"
+    // "print a;"
+    "var promenna = -99*-2;"
+    "print promenna;"
+    "c = 5;";
+    // "c = 5;"
+    // "print c;";
+    // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
+    // "print (a = 0) >= a;" //1
+    // "print !(b > (b = 0));"; //1
   // "var a = 0;"
   // "-(a = a + 1);"
   // "print a;";

@@ -94,6 +94,16 @@ void interpret(
 
     case OP_LOAD: {
       //da hodnotu promenne .value (treba "x") na zasobnik
+      //pokud proměnná neexistuje, tak ji v unordered_map vytvoří, s defaultní hodnotou typu
+      //accessing a non-existent key by using [], will add new entry in the
+      // map with your key and default value of your value type(or created with
+      // non-argument constructor); src: https://comp.lang.cpp.moderated.narkive.com/ijAtjHG0/unordered-map-non-existent-key
+      //takže kontroluju, jestli tam je (c++ 20)
+      if(!promenne.contains(get<string>(ins.value))){
+        cerr << "ERROR: Proměnná '" << get<string>(ins.value) << "' nebyla deklarována! (pro deklaraci `var a;` (výchozí hodnota je 0))\n";
+        //kdybych tady nereturnoval tak operátor [] ji v unordered_map vytvoří s hodnotou 0
+        return;
+      }
       zasobnik.push_back(
           promenne[get<string>(ins.value)]);
 
