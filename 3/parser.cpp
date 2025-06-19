@@ -579,6 +579,32 @@ void emit(std::vector<Instruction> &program,
 
       program.push_back(Instruction{.op = OP_LT});
     } break;
+    case ET_GREATER_EQUAL: {
+      //to stejné jako ET_LESS a pak na to OP_NOT
+      //takže >=
+
+      //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+      program.push_back(Instruction{.op = OP_LT});
+      program.push_back(Instruction{.op = OP_NOT});
+    } break;
+    // case ET_GREATER: {
+    //   //kdybych jenom provedl to stejné jako ET_LESS a pak na to dal OP_NOT
+    //   //tak bych dostal >= což je dobré pro ET_GREATER_EQUAL, ale není to dobré pro ET_GREATER
+    //   //=> jak pak rozeznat > od == že?
+    //   //možná by řešení bylo jet přes OP_DUP
+    //   //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
+    //   Expr leftSide = expr.children[0];
+    //   emit(program, leftSide);
+    //   //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+    //   Expr rightSide = expr.children[1];
+    //   emit(program, rightSide);
+
+    // } break;
   } 
 }
 
@@ -595,7 +621,11 @@ int main(){
   // "(a = 10) == a;"
   // "print (a = 10) == a;"
   "print a == 3;"
-  "print a != 3;";
+  "print a != 3;"
+  "print a >= -8;"
+  "print a >= -5;"
+  "print a >= a;"
+  "print a >= 3;";
   // "print a == 3;";
   // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   // "print a;"
