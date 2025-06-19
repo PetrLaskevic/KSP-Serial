@@ -636,7 +636,7 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
       program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
       program.push_back(Instruction{.op = OP_LT});
-      
+
       //ale pro fun convoluted vec, co me napadlo jako prvni: 
       //takže teď už je mám v proměnných, takže můžu provést (a >= b) && (a != b) pro a > b
       // >=
@@ -666,28 +666,37 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = -5;"
-  "var b = a - 1;"
-  // "(a = 10) == a;"
-  // "print (a = 10) == a;"
-  "print a == 3;"
-  "print a != 3;"
-  "print a > -8;"
-  "print a > -5;"
-  "print a > a;"
-  "print a > 3;"
-  "print a > b;"
-  "print(a);"
-  //pro grafy f1(x): y = x+3 a f2(x): y = 2(x+3) platí f1>f2 od (-inf, -3)
-  "a = -2;" //2
-  "print((a = a+3) > a*2);"
-  //grafy f1(x): y = 2x a f2(x): y = x+3 platí f1<f2 pro od (-inf, +3)
-  //sjednocení, kdy platí oobjí je -4 a míň
-  //naopak kdy se výsledky liší je (-3, 3)
-  // v (-inf, -3) platí obojí a v (3, inf) neplatí nic
-  //takže -2 -1 0 1 2
-  "a = -2;" //2
-  "print((a*2) < (a = a+3));";
+    "var a = 1 + 2 * 9 / -3;"
+    "print a;" //-5
+    "var b = 0;"
+    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
+    "print (a = 0) >= a;" //1
+    "print !(b > (b = 0));"; //1
+  // "var a = 0;"
+  // "-(a = a + 1);"
+  // "print a;";
+  // "var a = -5;"
+  // "var b = a - 1;"
+  // // "(a = 10) == a;"
+  // // "print (a = 10) == a;"
+  // "print a == 3;"
+  // "print a != 3;"
+  // "print a > -8;"
+  // "print a > -5;"
+  // "print a > a;"
+  // "print a > 3;"
+  // "print a > b;"
+  // "print(a);"
+  // //pro grafy f1(x): y = x+3 a f2(x): y = 2(x+3) platí f1>f2 od (-inf, -3)
+  // "a = -2;" //2
+  // "print((a = a+3) > a*2);"
+  // //grafy f1(x): y = 2x a f2(x): y = x+3 platí f1<f2 pro od (-inf, +3)
+  // //sjednocení, kdy platí oobjí je -4 a míň
+  // //naopak kdy se výsledky liší je (-3, 3)
+  // // v (-inf, -3) platí obojí a v (3, inf) neplatí nic
+  // //takže -2 -1 0 1 2
+  // "a = -2;" //2
+  // "print((a*2) < (a = a+3));";
   // "print a == 3;";
   // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
   // "print a;"
