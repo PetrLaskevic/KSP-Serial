@@ -456,7 +456,18 @@ void emit(std::vector<Instruction> &program,
 
     => jsou to ty případy, které si pro podstrom samy volají emit, protože po výsledku podstromu - instrukcích
     potřebují něco dát na zásobník (a jinak to moc rozumně afaik nejde)*/
-    if(expr.type != ET_NEGATE && expr.type != ET_ASSIGN && expr.type != ET_PRINT){
+    if(
+      expr.type != ET_NEGATE &&
+      expr.type != ET_ASSIGN &&
+      expr.type != ET_PRINT &&
+      //rovnosti - potřebují vyhodnotit levou a pravou stranu a pak je porovnat
+      expr.type != ET_GREATER &&
+      expr.type != ET_GREATER_EQUAL &&
+      expr.type != ET_LESS &&
+      expr.type != ET_LESS_EQUAL &&
+      expr.type != ET_EQUAL &&
+      expr.type != ET_NOT_EQUAL
+    ){
       for (auto& operand : expr.children) {
         std::cout << "operand: " << allOPToString(operand) << "\n"; 
         emit(program, operand);
@@ -535,8 +546,40 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_STORE, .value = leftSide.value});
       //v zadání chtějí: Přiřazení do proměnné vrací přiřazenou hodnotu, tak ji na zásobník znovu přidám
       program.push_back(Instruction{.op = OP_LOAD, .value = leftSide.value});
-    }
-  }
+    } break;
+    case ET_EQUAL: {
+      //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+
+      program.push_back(Instruction{.op = OP_EQ});
+
+    } break; /*break je důležitý, protože jinak bude fall through = následující case ET_NOT_EQUAL proběhne BEZ kontroly */
+    case ET_NOT_EQUAL: {
+      //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+
+      program.push_back(Instruction{.op = OP_EQ});
+      program.push_back(Instruction{.op = OP_NOT});
+    } break;
+    case ET_LESS: {
+      //vyhodnocení levé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+
+      program.push_back(Instruction{.op = OP_LT});
+    } break;
+  } 
 }
 
 int main(){
@@ -548,13 +591,19 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
-  "print a;"
-  "var b = 0;"
-  //prostě dát tu kontrolu středníku jinam
-  "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
-  "print (a = 0) >= a;"
-  "print !(b > (b = 0));";
+  "var a = -5;"
+  // "(a = 10) == a;"
+  // "print (a = 10) == a;"
+  "print a == 3;"
+  "print a != 3;";
+  // "print a == 3;";
+  // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
+  // "print a;"
+  // "var b = 0;"
+  // //prostě dát tu kontrolu středníku jinam
+  // "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
+  // "print (a = 0) >= a;"
+  // "print !(b > (b = 0));";
 
   std::vector<Token> ts = lex(source);
 

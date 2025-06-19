@@ -219,7 +219,8 @@ void interpret(
       }
       int value = zasobnik.back();
       zasobnik.pop_back();
-      if(value == 1){
+      //ne nutně 1, cokoliv truthy
+      if(value >= 1){
         value = 0;
       }else if (value == 0){
         value = 1;
