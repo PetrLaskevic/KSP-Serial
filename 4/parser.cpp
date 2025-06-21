@@ -130,13 +130,71 @@ Expr printStatement(TokenScanner &ts) {
 
 std::string prefixPrint(Expr& node);
 
-Expr statement(TokenScanner &ts) {
-  Expr a(ET_PRINT, "f"); //něco do konstruktoru
-  if (ts.match(TK_PRINT)){
-    a = printStatement(ts);
-  }else{
-    a = expression(ts);
+// for smyčky v AST jako čtveřici: inicializační výraz, podmínkový výraz, výraz i = i + 1 a samotné tělo smyčky.
+Expr for_statement(TokenScanner &ts) {
+  ts.consume(TK_LPAREN, "expected '(' after 'for'");
+
+  Expr init(ET_BLOCK, std::vector<Expr>{});
+  if (ts.match(TK_SEMICOLON)) {
+    // prázdný
+  } else if (ts.match(TK_VAR)) {
+    // definice proměnné (středník kontroluje sám)
+    init = assignment(ts); //v templatu var_statement, které neexistuje
+    //možná ten šabloní var_statement ano, ale můj assignment ne, ; řeším nahoře v statement
+    //proto si ; tady zkontroluju
+    ts.consume(TK_SEMICOLON,
+            "expected ';' after the first "
+            "expression (assignment) inside a for statement");
+  } else {
+    //afaik pokud proměnná už je definována, tak s ní tam může být nějaký výraz (třeba assignment vlastně)
+    //var a;
+    //for(a = 3; atd..)
+    init = expression(ts);
+    ts.consume(TK_SEMICOLON,
+               "expected ';' after the first "
+               "expression inside a for statement");
   }
+
+  //ten prostřední člen for statementu, ta podmínka
+  //ternary kontroluje, jestli to není for(; ;) případ
+  Expr cond = ts.check(TK_SEMICOLON)
+                  ? Expr(ET_LITERAL, "1")
+                  : expression(ts);
+
+  ts.consume(TK_SEMICOLON,
+             "expected ';' after the second "
+             "expression inside a for statement");
+
+  //třetí člen, i=i+1;
+  Expr expr = ts.check(TK_RPAREN)
+      ? Expr(ET_BLOCK, std::vector<Expr>{})
+      : expression(ts);
+  ts.consume(TK_RPAREN,
+             "expected ')' after the third "
+             "expression inside a for statement");
+
+  /*co se provede uvnitř 
+  for(){
+    tady
+  }
+  */
+  //pro for (var i = 0; i < 10; i = i + 1) print i; 
+  // Expr body = statement(ts);
+  //ale protože chceme povolit i víc statementů za sebou, tedy block
+  Expr body = block(ts);
+
+  return Expr(ET_FOR, {init, cond, expr, body});
+}
+
+Expr statement(TokenScanner &ts) {
+  if (ts.match(TK_PRINT)) return printStatement(ts);
+  // if (ts.match(TK_VAR)) return var_statement(ts); //mám v rámci assignment v expression, snad v pohodě
+  if (ts.match(TK_FOR)) return for_statement(ts);
+  // if (ts.match(TK_IF)) return if_statement(ts);
+  // if (ts.match(TK_WHILE)) return while_statement(ts);
+  // if (ts.match(TK_LBRACE)) return block(ts);
+  
+  Expr a = expression(ts);
   //semicolon check na jednom miste, at uz je to call do expression nebo print statement
   if(!ts.match(TK_SEMICOLON)){
     ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
@@ -144,10 +202,12 @@ Expr statement(TokenScanner &ts) {
   return a;
 }
 
-Expr parse(TokenScanner &ts) {
+//předtím název parse, teď block
+Expr block(TokenScanner &ts) {
   std::vector<Expr> statements;
 
-  while (!ts.isAtEnd()) {
+  //dokud není } (tím blok končí) příp. dokud není konec souboru
+  while (!ts.match(TK_RBRACE) && !ts.isAtEnd()) {
     statements.push_back(statement(ts));
   }
 
@@ -767,7 +827,7 @@ int main(){
   // std::cout << tokenScanner.isAtEnd() << "\n";
   // auto ast = expression(tokenScanner);
   // std::cout << printExprTree(ast) << "\n";
-  auto ast = parse(tokenScanner);
+  auto ast = block(tokenScanner);
   std::cout << "PUVODNI___________ " << source << "_________\n";
   std::cout << printExprTree(ast) << "\n";
   std::cout << "\n" << prefixPrint(ast) << "\n";
