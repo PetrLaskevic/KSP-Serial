@@ -696,19 +696,24 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-    // "var a = 1 + 2 * 9 / -3;"
-    // "print a;" //-5
-    // "var b = 0;"
-    // "var a;"
-    // "print a;"
-    "var promenna = -99*-2;"
-    "print promenna;"
-    "c = 5;";
+    "var a = 1 + 2 * 9 / -3;"
+    "print a;" //-5
+    "var b = 0;"
+    "var a;"
+    "print a;" //0
+    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
+    "print (a = 0) >= a;" //1
+    "print !(b > (b = 0));"; //1
+    //po tomhle referencčím programzú dokonce 7
+
+    //po tomhle na stacku ulozene zustavaji 2 osirele veci
+    // "var promenna = -99*-2;"
+    // "print promenna;";
+
+
     // "c = 5;"
     // "print c;";
-    // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
-    // "print (a = 0) >= a;" //1
-    // "print !(b > (b = 0));"; //1
+   
   // "var a = 0;"
   // "-(a = a + 1);"
   // "print a;";
@@ -777,5 +782,6 @@ int main(){
   //proměnné, které to bude mít k dispozici, žijí zde
   std::unordered_map<std::string, int> vars;
   interpret(program, stack, vars);
+  cout << "Stack length: " << stack.size() << "\n";
   cout << "Hello world\n"; //abych si mohl dát breakpoint za interpret
 }
