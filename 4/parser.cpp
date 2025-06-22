@@ -118,17 +118,58 @@ struct Expr {
 
 Expr expression(TokenScanner &ts);
 Expr unary(TokenScanner &ts);
+std::string prefixPrint(Expr& node, int identLevel = 1);
 
 Expr printStatement(TokenScanner &ts) {
   Expr value = expression(ts);
   std::cout << "printStatement called\n";
-  //vykomentováno, protože už to řeším v o úroveň výš v statement
-  //to je lepší než to řešit 2x: jednou v statement a jednou tady
-  //řešit to v expression rozbíjelo nested () statementyy (po TK_LPAREN další expression() call)
+  //v statement teď je early return na printStatement, tak ; check dám i sem
+   if(!ts.match(TK_SEMICOLON)){
+    ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(value) + "\n");
+  }
   return Expr(ET_PRINT, {value});
 }
 
-std::string prefixPrint(Expr& node);
+Expr statement(TokenScanner &ts);
+bool isEqualityExpr(ExprType t);
+Expr block(TokenScanner &ts);
+Expr assignment(TokenScanner &ts);
+
+Expr if_statement(TokenScanner &ts) {
+  ts.consume(TK_LPAREN, "expected '(' after 'if'");
+  //tady pocitam klasicke if(boolean) nebo if(expression)
+  //obojí by měl vyřešit expression, if(a) asi vyřeším na > 0 
+  Expr condition = expression(ts);
+  //pokud je výraz, tak ho nechám, pokud není př if(a), tak ho převedu na if(a>0)
+  if(!isEqualityExpr(condition.type)){
+    condition = Expr(ET_GREATER, {condition, Expr(ET_LITERAL, "0")});
+  }
+  ts.consume(TK_RPAREN,
+            "expected ')' after an "
+            "expression inside an if statement");
+
+  //statement nove detekuje, jestli dalsi token je { a kdyz ano, tak vola block
+  Expr body = statement(ts);
+  return Expr(ET_IF, {condition, body});
+}
+
+Expr while_statement(TokenScanner &ts){
+  ts.consume(TK_LPAREN, "expected '(' after 'while'");
+  //tady pocitam klasicke while(boolean) nebo while(expression)
+  //obojí by měl vyřešit expression, while(a) asi vyřeším na a > 0 
+  Expr condition = expression(ts);
+  //pokud je výraz, tak ho nechám, pokud není př while(a), tak ho převedu na while(a>0)
+  if(!isEqualityExpr(condition.type)){
+    condition = Expr(ET_GREATER, {condition, Expr(ET_LITERAL, "0")});
+  }
+  ts.consume(TK_RPAREN,
+            "expected ')' after an "
+            "expression inside a while statement");
+
+  //statement nove detekuje, jestli dalsi token je { a kdyz ano, tak vola block
+  Expr body = statement(ts);
+  return Expr(ET_WHILE, {condition, body});
+}
 
 // for smyčky v AST jako čtveřici: inicializační výraz, podmínkový výraz, výraz i = i + 1 a samotné tělo smyčky.
 Expr for_statement(TokenScanner &ts) {
@@ -181,7 +222,10 @@ Expr for_statement(TokenScanner &ts) {
   //pro for (var i = 0; i < 10; i = i + 1) print i; 
   // Expr body = statement(ts);
   //ale protože chceme povolit i víc statementů za sebou, tedy block
-  Expr body = block(ts);
+  //on se block bude nove volat ze stamentu, protoze v 
+  //statementu je `if (ts.match(TK_LBRACE)) return block(ts);`
+  //tedy handling {
+  Expr body = statement(ts);
 
   return Expr(ET_FOR, {init, cond, expr, body});
 }
@@ -190,9 +234,9 @@ Expr statement(TokenScanner &ts) {
   if (ts.match(TK_PRINT)) return printStatement(ts);
   // if (ts.match(TK_VAR)) return var_statement(ts); //mám v rámci assignment v expression, snad v pohodě
   if (ts.match(TK_FOR)) return for_statement(ts);
-  // if (ts.match(TK_IF)) return if_statement(ts);
-  // if (ts.match(TK_WHILE)) return while_statement(ts);
-  // if (ts.match(TK_LBRACE)) return block(ts);
+  if (ts.match(TK_IF)) return if_statement(ts);
+  if (ts.match(TK_WHILE)) return while_statement(ts);
+  if (ts.match(TK_LBRACE)) return block(ts);
   
   Expr a = expression(ts);
   //semicolon check na jednom miste, at uz je to call do expression nebo print statement
@@ -304,6 +348,18 @@ bool isEqualityOp(TokenType t){
     case TK_NOT_EQUAL: return true;
     case TK_GREATER_EQUAL: return true;
     case TK_LESS_EQUAL: return true;
+    default: return false;
+  }
+}
+
+bool isEqualityExpr(ExprType t){
+  switch(t){
+    case ET_GREATER: return true;
+    case ET_LESS: return true;
+    case ET_EQUAL: return true;
+    case ET_GREATER_EQUAL: return true;
+    case ET_LESS_EQUAL: return true;
+    case ET_NOT_EQUAL: return true;
     default: return false;
   }
 }
@@ -465,6 +521,9 @@ std::string allOPToString(Expr& node){
     case ET_VAR: return "VAR_DECL";
     case ET_LITERAL: return "LITERAL";
     case ET_NAME: return "VAR_USE";
+    case ET_IF: return "IF";
+    case ET_WHILE: return "WHILE";
+    case ET_FOR: return "FOR";
     //nic není pravda
     default: return "";
   }
@@ -756,14 +815,18 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-    "var a = 1 + 2 * 9 / -3;"
-    "print a;" //-5
-    "var b = 0;"
+    // "var a = 1 + 2 * 9 / -3;"
+    // "print a;" //-5
+    // "var b = 0;"
     "var a;"
-    "print a;" //0
-    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
-    "print (a = 0) >= a;" //1
-    "print !(b > (b = 0));"; //1
+    "if(a > 0) print a;"
+    "for(a = 5; a < 10; a = a + 1){print a * a; print a;}"
+    "while(!a){a = a - 1; print a;}"
+    "while(a+1){a = a - 1; print a;}";;
+    // "print a;" //0
+    // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
+    // "print (a = 0) >= a;" //1
+    // "print !(b > (b = 0));"; //1
     //po tomhle referencčím programzú dokonce 7
 
     //po tomhle na stacku ulozene zustavaji 2 osirele veci
