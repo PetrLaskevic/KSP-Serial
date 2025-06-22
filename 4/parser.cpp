@@ -529,7 +529,7 @@ std::string allOPToString(Expr& node){
   }
 }
 //vypise strom prefixove, jakoby vznikl sekvenci techto jakoby function callu na zasobniku
-std::string prefixPrint(Expr& node){
+std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, coz definuju nahore std::string prefixPrint(Expr& node, int identLevel = 1);
   std::string op = allOPToString(node);
   //leaves
   if(node.type == ET_LITERAL){
@@ -545,19 +545,25 @@ std::string prefixPrint(Expr& node){
   //expressions: 2 children (binary operators) or 1 child (unary operators)
   op = op + "(";
   std::string separator = ",";
+  std::string ident(identLevel*2, ' ');
   if(node.type == ET_BLOCK){
     op += "\n";
     separator = ";\n";
+    identLevel++;
   }
+  std::string usedIdent = " ";
   for(Expr child: node.children){
-    op += " " + prefixPrint(child) + separator;
+    if(node.type == ET_BLOCK){
+      usedIdent = ident;
+    }
+    op += usedIdent + prefixPrint(child, identLevel) + separator;
   }
   //remove the last ","
   op.pop_back();
   if(node.type == ET_BLOCK){
     op += "\n";
   }
-  op += " )";
+  op += usedIdent.substr(0, usedIdent.length()/2) + ")";
   return op;
 
   std::cerr << "unhandled node in prefixPrint\n";
