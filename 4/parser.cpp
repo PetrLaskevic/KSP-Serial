@@ -597,6 +597,9 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   std::cerr << "unhandled node in prefixPrint\n";
 }
 
+void emit_condition(std::vector<Instruction> &program,
+                    Expr &condition, Expr &if_true,
+                    Expr &if_false);
 
 void emit(std::vector<Instruction> &program,
           Expr &expr) {
@@ -622,7 +625,8 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_LESS &&
       expr.type != ET_LESS_EQUAL &&
       expr.type != ET_EQUAL &&
-      expr.type != ET_NOT_EQUAL
+      expr.type != ET_NOT_EQUAL &&
+      expr.type != ET_IF
     ){
       for (auto& operand : expr.children) {
         std::cout << "operand: " << allOPToString(operand) << "\n"; 
@@ -837,6 +841,12 @@ void emit(std::vector<Instruction> &program,
       // program.push_back(Instruction{.op = OP_PUSH, .value = 2});
       // program.push_back(Instruction{.op = OP_EQ});
     } break;
+    case ET_IF: {
+      Expr condition = expr.children[0];
+      Expr if_true = expr.children[1];
+      Expr if_false = expr.children[2];
+      emit_condition(program, condition, if_true, if_false);
+    } break;
   } 
 }
 
@@ -883,20 +893,26 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
+    "var a = 5;"
+    "if(a == 2){"
+    "print 10;"
+    "}else{"
+    "print 20;}";
+    // "var a;"
+    // "var b;"
+    // "if (a > b) {"
+    //   "while (b < a)"
+    //     "print b;"
+
+    //   "if (123)"
+    //     "if (321)"
+    //       "while (231)"
+    //         "print 213;"
+    // "}else{print 2;}";
+
     // "var a = 1 + 2 * 9 / -3;"
     // "print a;" //-5
     // "var b = 0;"
-    "var a;"
-    "var b;"
-    "if (a > b) {"
-      "while (b < a)"
-        "print b;"
-
-      "if (123)"
-        "if (321)"
-          "while (231)"
-            "print 213;"
-    "}else{print 2;}";
     // "print a;" //0
     // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
     // "print (a = 0) >= a;" //1
