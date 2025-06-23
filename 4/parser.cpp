@@ -139,18 +139,30 @@ Expr if_statement(TokenScanner &ts) {
   ts.consume(TK_LPAREN, "expected '(' after 'if'");
   //tady pocitam klasicke if(boolean) nebo if(expression)
   //obojí by měl vyřešit expression, if(a) asi vyřeším na > 0 
-  Expr condition = expression(ts);
+  Expr ifCond = expression(ts);
   //pokud je výraz, tak ho nechám, pokud není př if(a), tak ho převedu na if(a>0)
-  if(!isEqualityExpr(condition.type)){
-    condition = Expr(ET_GREATER, {condition, Expr(ET_LITERAL, "0")});
+  if(!isEqualityExpr(ifCond.type)){
+    ifCond = Expr(ET_GREATER, {ifCond, Expr(ET_LITERAL, "0")});
   }
   ts.consume(TK_RPAREN,
             "expected ')' after an "
             "expression inside an if statement");
 
   //statement nove detekuje, jestli dalsi token je { a kdyz ano, tak vola block
-  Expr body = statement(ts);
-  return Expr(ET_IF, {condition, body});
+  Expr ifBody = statement(ts);
+
+  //statement volá block(), který bere tokeny dokud nenarazí na } kterou sežere
+  //if(cond){
+  //}else{}
+
+  Expr elseBody(ET_BLOCK, std::vector<Expr>{});
+
+  if(ts.match(TK_ELSE)){
+    //pokud za else bude {, tak to bude dál block
+    //pokud ne, tak se elseBody změní na nějaký expression co bude dál else print a;
+    elseBody = statement(ts);
+  }
+  return Expr(ET_IF, {ifCond, ifBody, elseBody});
 }
 
 Expr while_statement(TokenScanner &ts){
@@ -236,6 +248,8 @@ Expr statement(TokenScanner &ts) {
   if (ts.match(TK_FOR)) return for_statement(ts);
   if (ts.match(TK_IF)) return if_statement(ts);
   if (ts.match(TK_WHILE)) return while_statement(ts);
+
+  //pokud { tak nový block
   if (ts.match(TK_LBRACE)) return block(ts);
   
   Expr a = expression(ts);
@@ -552,18 +566,32 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
     identLevel++;
   }
   std::string usedIdent = " ";
-  for(Expr child: node.children){
-    if(node.type == ET_BLOCK){
-      usedIdent = ident;
+
+  if(node.type == ET_IF){
+    identLevel++;
+    op += usedIdent + prefixPrint(node.children[0], identLevel) +
+    "{\n" + ident + prefixPrint(node.children[1], identLevel) + "}";
+    if(node.children[2].children.size() != 0){
+      op += "ELSE{\n" + ident + prefixPrint(node.children[2], identLevel) + "}";
     }
-    op += usedIdent + prefixPrint(child, identLevel) + separator;
+  }else{
+    for(Expr child: node.children){
+      if(node.type == ET_BLOCK){
+        usedIdent = ident;
+      }
+      op += usedIdent + prefixPrint(child, identLevel) + separator;
+    }
   }
   //remove the last ","
   op.pop_back();
   if(node.type == ET_BLOCK){
     op += "\n";
   }
-  op += usedIdent.substr(0, usedIdent.length()/2) + ")";
+  usedIdent.pop_back();
+  if(usedIdent.size() > 0){
+    usedIdent.pop_back();
+  }
+  op += usedIdent + ")";
   return op;
 
   std::cerr << "unhandled node in prefixPrint\n";
@@ -812,6 +840,40 @@ void emit(std::vector<Instruction> &program,
   } 
 }
 
+void emit_condition(std::vector<Instruction> &program,
+                    Expr &condition, Expr &if_true,
+                    Expr &if_false) {
+  // generujeme něco takového
+  // * condition
+  // * OP_BRANCH [if_true]
+  // * if_false
+  // * OP_PUSH 1
+  // * OP_BRANCH [end]
+  // * if_true
+  // * end:
+  emit(program, condition);
+
+  auto condition_ix = size(program);
+  // * OP_BRANCH [if_true]
+  program.push_back(Instruction{
+      .op = OP_BRANCH}); // value přiřadíme později
+
+  emit(program, if_false);
+
+  program.push_back(
+      Instruction{.op = OP_PUSH, .value = 1});
+  auto endjump_ix = size(program);
+  //ten OP_BRANCH [end]
+  program.push_back(Instruction{.op = OP_BRANCH});
+
+  // sem by měla skočit podmínka, pokud je true
+  program[condition_ix].value = (int)ssize(program);
+  emit(program, if_true);
+
+  // sem skáče nepodmíněný skok po `else` bloku
+  program[endjump_ix].value = (int)ssize(program);
+}
+
 int main(){
   // "3-5+2" //"-1+1+2+1-2-3" var neco=3;neco=5;
   // "var neco = 3" => BLOCK(VAR(neco), ASSIGN(neco, 3))
@@ -825,10 +887,16 @@ int main(){
     // "print a;" //-5
     // "var b = 0;"
     "var a;"
-    "if(a > 0) print a;"
-    "for(a = 5; a < 10; a = a + 1){print a * a; print a;}"
-    "while(!a){a = a - 1; print a;}"
-    "while(a+1){a = a - 1; print a;}";;
+    "var b;"
+    "if (a > b) {"
+      "while (b < a)"
+        "print b;"
+
+      "if (123)"
+        "if (321)"
+          "while (231)"
+            "print 213;"
+    "}else{print 2;}";
     // "print a;" //0
     // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
     // "print (a = 0) >= a;" //1
