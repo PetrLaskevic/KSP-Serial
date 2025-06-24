@@ -1025,19 +1025,16 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  // "var a = 5;"
-  // "while ((a = a - 1) >= 0) {"
-  //   "print a;"
-  // "}"
-  // "var i;" //works, putting it in the loop as var i = 10 doesn't, resulting in "ERROR: Proměnná 'i' nebyla deklarována!"
-  // "var a = 8;" //ASSIGN( VAR(a), LIT(8));
-  // "print a;";
-  //v for loop je to ASSIGN(NAM(A), LIT(10)), což by nemělo (má tam být VAR)
+  "var a = 5;"
+  "while ((a = a - 1) >= 0) {"
+    "print a;"
+  "}"
+  "print 65535;"
   "for (var i = 10; i < 20; i = i + 1) {"
-    "print i;"
-    // "var delitelne2 = i / 2 == (i + 1) / 2;"
-    // "if (delitelne2) {"
-    // "  print i;"
+    "var delitelne2 = i / 2 == (i + 1) / 2;"
+    "print delitelne2;"
+    "if (delitelne2) {"
+    "  print i;"
   "}";
 
     // "var a = 0;"
