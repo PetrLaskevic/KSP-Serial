@@ -211,6 +211,8 @@ void interpret(
      zasobnik.pop_back();
      if(podminka){
       ip = get<int>(ins.value);
+      //continue abychom se vyhnuli ip+=1 dole
+      continue;
      }
 
     } break;
