@@ -1035,7 +1035,16 @@ int main(){
     "print delitelne2;"
     "if (delitelne2) {"
     "  print i;"
-  "}";
+  "}"
+    //tohle je nested loop
+    "print 64;"
+    "var vysledek = 1;"
+    "var faktorial = 12;"
+    "while(faktorial){"
+    "  vysledek = vysledek * faktorial;"
+    "  faktorial = faktorial - 1;"
+    "}"
+  "print vysledek;}";
 
     // "var a = 0;"
     // "for(a = 0; a < 8; a = a + 1){"
