@@ -604,6 +604,12 @@ void emit_condition(std::vector<Instruction> &program,
 void emit_while(std::vector<Instruction> &program,
                 Expr &condition, Expr &whileBody);
 
+void emit_for(std::vector<Instruction> &program,
+              Expr &init,
+              Expr &condition,
+              Expr &conditionChanger,
+              Expr &body);
+
 void emit(std::vector<Instruction> &program,
           Expr &expr) {
 
@@ -630,7 +636,8 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_EQUAL &&
       expr.type != ET_NOT_EQUAL &&
       expr.type != ET_IF &&
-      expr.type != ET_WHILE
+      expr.type != ET_WHILE &&
+      expr.type != ET_FOR
     ){
       for (auto& operand : expr.children) {
         std::cout << "operand: " << allOPToString(operand) << "\n"; 
@@ -856,6 +863,13 @@ void emit(std::vector<Instruction> &program,
       Expr body = expr.children[1];
       emit_while(program, condition, body);
     } break;
+    case ET_FOR: {
+      Expr init = expr.children[0];
+      Expr condition = expr.children[1];
+      Expr expression = expr.children[2];
+      Expr body = expr.children[3];
+      emit_for(program, init, condition, expression, body);
+    } break;
   } 
 }
 
@@ -940,6 +954,68 @@ void emit_while(std::vector<Instruction> &program,
   program[endJumpInstructionAdress].value = endIP;
 }
 
+void emit_for(std::vector<Instruction> &program,
+              Expr &init,
+              Expr &condition,
+              Expr &conditionChanger,
+              Expr &body){
+  // * emit(init)
+  // * begin
+  // *emit(condition)
+  // * OP_BRANCH [loop_body_begin] //if true
+  // * OP_PUSH 1 //pokud dojde sem, aby skočilo na konec unconditionally
+  // * OP_BRANCH [end]
+  // * loop_body_begin
+  // * emit(body)
+  // * emit(conditionChanger)
+  // * OP_PUSH 1
+  // * OP_BRANCH [begin]
+  // * end
+
+  //declare or assign to variable (first in for(;;) )
+  
+  emit(program, init);
+
+  int beginIP = size(program);
+
+  emit(program, condition);
+  int branchInstructionPtr = size(program);
+  program.push_back(Instruction{
+    .op = OP_BRANCH, .value = branchInstructionPtr + 3
+  });
+
+  //unconditional jump na end, pokud jsme se sem dostali = nebyla splněna podmínka
+  program.push_back(Instruction{
+    .op = OP_PUSH,
+    .value = 1
+  });
+  int endJumpInstructionAdress = size(program);
+  program.push_back(Instruction{
+    .op = OP_BRANCH,
+  }); // value end přiřadíme později
+
+  emit(program, body);
+
+  emit(program, conditionChanger);
+
+  //unconditional jump na ověření podmínky znova = pokud jsme se sem dostali = proběhlo jedno kolo smyčky
+  program.push_back(Instruction{
+    .op = OP_PUSH,
+    .value = 1
+  });
+  program.push_back(Instruction{
+    .op = OP_BRANCH,
+    .value = beginIP
+  });
+
+  int endIP = size(program);
+  program.push_back(Instruction{
+    .op = OP_NOP
+  });
+  //tell the unconditional jump na end, kam má skočit, když není splněna podmínka
+  program[endJumpInstructionAdress].value = endIP;
+}
+
 int main(){
   // "3-5+2" //"-1+1+2+1-2-3" var neco=3;neco=5;
   // "var neco = 3" => BLOCK(VAR(neco), ASSIGN(neco, 3))
@@ -950,18 +1026,22 @@ int main(){
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
     "var a = 0;"
+    "for(a = 0; a < 8; a = a + 1){"
+    "print a;}";
     // "if(a == 2){"
     // "print 10;"
     // "}else{"
     // "print 20;}"
-    "a = 5;"
-    "while(a >= 0){"
-      "print a;"
-      "if(a == 3){"
-        "print a * a;}"
-      "a = a - 1;}"
-    "print 255;"
-    "print a;";
+
+    // "a = 5;"
+    // "while(a >= 0){"
+    //   "print a;"
+    //   "if(a == 3){"
+    //     "print a * a;}"
+    //   "a = a - 1;}"
+    // "print 255;"
+    // "print a;";
+
     // "var a;"
     // "var b;"
     // "if (a > b) {"
