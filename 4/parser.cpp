@@ -888,7 +888,7 @@ void emit(std::vector<Instruction> &program,
       Expr body = expr.children[3];
       emit_for(program, init, condition, expression, body);
       //ať for taky něco vrací
-      // program.push_back(Instruction{.op = OP_PUSH, .value = 0});
+      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
     } break;
     case ET_BLOCK: {
       //přidává runtime OP_POP instrukce, aby nebyl memory leak,
@@ -900,10 +900,16 @@ void emit(std::vector<Instruction> &program,
 
 void emit_block(std::vector<Instruction> &program,
                 std::vector<Expr> &statements) {
-  if (statements.empty()) {
-    program.push_back(
-        Instruction{.op = OP_PUSH, .value = 0});
-  } else {
+  //proč je tam OP_PUSH pro prázdný block? takhle mi vzniká z `emit_for` callem `emit(program, body);` memory leak
+  //pro případ když body je prázdný, tj for (var i = 10; i < 20; i = i + 1) {}
+  //mozna to bude pro nested loopy?
+  //=> to si ale pokreju nahoře, že po emitu na for bude pop?
+  // if (statements.empty()) {
+  //   program.push_back(
+  //       Instruction{.op = OP_PUSH, .value = 0});
+  // } else {
+    //pro for loop tohle vypise jeden block, ten for loop body
+    std::cout << "statements number " << statements.size() << "\n";
     for (size_t i = 0; i < size(statements); i++) {
       //referenční verze mi na programu:
       // "var a = 5;"
@@ -925,8 +931,8 @@ void emit_block(std::vector<Instruction> &program,
       // statements.push_back(Expr(ET_LITERAL, "0"));)
       //nebo ne
       emit(program, statements[i]);
-      // program.push_back(Instruction{.op = OP_POP, .value = 0});
-    }
+      program.push_back(Instruction{.op = OP_POP, .value = 0});
+    // }
   }
 }
 
@@ -1030,8 +1036,9 @@ void emit_for(std::vector<Instruction> &program,
   // * end
 
   //declare or assign to variable (first in for(;;) )
-  
   emit(program, init);
+  //which does put a stray value on the data stack
+  program.push_back(Instruction{.op = OP_POP});
 
   int beginIP = size(program);
 
@@ -1051,9 +1058,17 @@ void emit_for(std::vector<Instruction> &program,
     .op = OP_BRANCH,
   }); // value end přiřadíme později
 
+  //whatever was in the body, it sure put something on the data stack
+  //how much depends on the amount of statements in there
+  // emit(program, body);
   emit(program, body);
+  
+  // emit_block(program, {body}); // for the pop, as a new block is started
 
+  //the i = i + 1 there puts a value on the data stack
   emit(program, conditionChanger);
+  //so remove it to avoid the memory leak
+  program.push_back(Instruction{.op = OP_POP});
 
   //unconditional jump na ověření podmínky znova = pokud jsme se sem dostali = proběhlo jedno kolo smyčky
   program.push_back(Instruction{
@@ -1082,27 +1097,32 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 5;"; //this alone puts three things on the stack
-  // "print a;"
-  // "while ((a = a - 1) >= 0) {"
-  //   "print a;"
-  // "}"
-  // "print 65535;"
-  // "for (var i = 10; i < 20; i = i + 1) {"
-  //   "var delitelne2 = i / 2 == (i + 1) / 2;"
-  //   "print delitelne2;"
-  //   "if (delitelne2) {"
-  //   "  print i;"
-  // "}";
+  "var a = 5;" //this alone puts three things on the stack
+  // "print a*2;"
+  "while ((a = a - 1) >= 0) {"
+    "print a;"
+  "}"
+  "print 65535;"
+
+  //stack length 21 pro  "for (var i = 10; i < 20; i = i + 1) a empty block uvnitř
+  //fixed var i = 10 in for loop putting a stray value
+  //now it is 20 (19 from loop, 1 from block I suppose)
+  "for (var i = 10; i < 20; i = i + 1) {"
+    // "var delitelne2 = i / 2 == (i + 1) / 2;"
+    // "print delitelne2;"
+    // "if (delitelne2) {"
+    "for(var a = 0;a<5; a = a + 1)"
+    "{print i;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement, it is not
+  "}";
     //tohle je nested loop
-    "print 64;"
-    "var vysledek = 1;"
-    "var faktorial = 12;"
-    "while(faktorial){"
-    "  vysledek = vysledek * faktorial;"
-    "  faktorial = faktorial - 1;"
-    "}"
-  "print vysledek;}";
+  //   "print 64;"
+  //   "var vysledek = 1;"
+  //   "var faktorial = 12;"
+  //   "while(faktorial){"
+  //   "  vysledek = vysledek * faktorial;"
+  //   "  faktorial = faktorial - 1;"
+  //   "}"
+  // "print vysledek;}";
 
     // "var a = 0;"
     // "for(a = 0; a < 8; a = a + 1){"
