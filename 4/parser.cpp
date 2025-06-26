@@ -1062,8 +1062,12 @@ void emit_for(std::vector<Instruction> &program,
   //how much depends on the amount of statements in there
   // emit(program, body);
   emit(program, body);
-  
-  // emit_block(program, {body}); // for the pop, as a new block is started
+
+  if(body.type != ET_BLOCK){
+    //pokud to je ten `for(var a = 0;a<5; a = a + 1) print i;` případ
+    // (není tedy block za for loopem, ale jedna věc)
+    program.push_back(Instruction{.op=OP_POP});
+  }
 
   //the i = i + 1 there puts a value on the data stack
   emit(program, conditionChanger);
@@ -1112,7 +1116,8 @@ int main(){
     // "print delitelne2;"
     // "if (delitelne2) {"
     "for(var a = 0;a<5; a = a + 1)"
-    "{print i;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement, it is not
+    "print i;print a;"
+    // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
   "}";
     //tohle je nested loop
   //   "print 64;"
