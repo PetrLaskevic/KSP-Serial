@@ -455,69 +455,6 @@ Expr expression(TokenScanner &ts) {
   return assignment(ts);
 }
 
-std::string binaryExprOperatorToString(Expr& node){
-  ExprType t = node.type;
-  switch (t) {
-    // binární operátory
-    case ET_MULTIPLY: return "*";
-    case ET_DIVIDE: return "/";
-    case ET_ADD: return "+";
-    case ET_SUBTRACT: return "-";
-    case ET_LESS: return "<";
-    case ET_LESS_EQUAL: return "<=";
-    case ET_GREATER: return ">";
-    case ET_GREATER_EQUAL: return ">=";
-    case ET_EQUAL: return "==";
-    case ET_NOT_EQUAL: return "!=";
-    case ET_ASSIGN: return "=";
-    //nic není pravda
-    default: return "";
-  }
-}
-
-std::string unaryExprOperatorToString(Expr& node){
-  ExprType t = node.type;
-  switch (t) {
-    //unární operátory
-    case ET_NEGATE: return "-";
-    case ET_NOT: return "!";
-    //nic není pravda
-    default: return "";
-  }
-}
-
-//vypise strom infixove, podporuje pouze aritmeticke vyrazy
-std::string printExprTree(Expr& node){
-  if(node.type == ET_LITERAL){
-    return node.value;
-  }
-  if(node.type == ET_NAME){ //co je to - proměnná?
-    return node.value;
-  }
-  if(node.type == ET_VAR){
-    return "var " + node.value;
-  }
-
-  bool isBinaryOP = (binaryExprOperatorToString(node) != "");
-  if(isBinaryOP){
-    std::cout << "binary operator " << binaryExprOperatorToString(node) << "\n";
-    return "(" + printExprTree(node.children[0]) + binaryExprOperatorToString(node) + printExprTree(node.children[1]) + ")"; 
-  }
-  bool isUnaryOP = (unaryExprOperatorToString(node) != "");
-  if(isUnaryOP){
-    std::cout << "unary operator " << unaryExprOperatorToString(node) << "\n";
-    return "[" + unaryExprOperatorToString(node) + printExprTree(node.children[0]) + "]";
-  }
-  if(node.type == ET_BLOCK){
-    //to avoid segmentation fault on empty blocks
-    if(node.children.size() == 0){
-      return "EMPTY BLOCK";
-    }
-    return printExprTree(node.children[0]);
-  }
-  return "UNHANDLED TOKEN";
-}
-
 std::string allOPToString(Expr& node){
   ExprType t = node.type;
   switch (t) {
@@ -1230,7 +1167,6 @@ int main(){
   // std::cout << printExprTree(ast) << "\n";
   auto ast = block(tokenScanner);
   std::cout << "PUVODNI___________ " << source << "_________\n";
-  std::cout << printExprTree(ast) << "\n";
   std::cout << "\n" << prefixPrint(ast) << "\n";
   std::cout << "__________________________________________\n";
   std::cout << "\nProgram output:\n\n";
