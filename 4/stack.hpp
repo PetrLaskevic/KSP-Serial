@@ -129,7 +129,7 @@ void interpret(
       if(zasobnik.size() < 1){
         cout << "Pozor, nelze pprovést OP_POP když je zásobník prázdný!\n";
       }
-      cout << "OP_POP\n";
+      // cout << "OP_POP\n";
       zasobnik.pop_back();
     } break;
 

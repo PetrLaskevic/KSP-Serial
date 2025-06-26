@@ -893,6 +893,12 @@ void emit_condition(std::vector<Instruction> &program,
 
   emit(program, if_false);
 
+  if(if_false.type != ET_BLOCK){
+    //pokud to je ten `if(delitelne2) print i; else print i*i;` případ
+    // (není tedy block za if, ale jedna věc)
+    program.push_back(Instruction{.op=OP_POP});
+  }
+
   program.push_back(
       Instruction{.op = OP_PUSH, .value = 1});
   auto endjump_ix = size(program);
@@ -902,6 +908,12 @@ void emit_condition(std::vector<Instruction> &program,
   // sem by měla skočit podmínka, pokud je true
   program[condition_ix].value = (int)ssize(program);
   emit(program, if_true);
+
+  if(if_true.type != ET_BLOCK){
+    //pokud to je ten `if(delitelne2) print i;` případ
+    // (není tedy block za if, ale jedna věc)
+    program.push_back(Instruction{.op=OP_POP});
+  }
 
   // sem skáče nepodmíněný skok po `else` bloku
   program[endjump_ix].value = (int)ssize(program);
@@ -1048,10 +1060,12 @@ int main(){
   //stack length 21 pro  "for (var i = 10; i < 20; i = i + 1) a empty block uvnitř
   //fixed var i = 10 in for loop putting a stray value
   //now it is 20 (19 from loop, 1 from block I suppose)
-  "for (var i = 10; i < 20; i = i + 1) {"
-    // "var delitelne2 = i / 2 == (i + 1) / 2;"
-    // "print delitelne2;"
-    // "if (delitelne2) {"
+  "for (var i = 10; i < 110; i = i + 1) {"
+    "var delitelne2 = i / 2 == (i + 1) / 2;"
+    "print delitelne2;"
+    "if (delitelne2) print i;"
+    "else print i*i;"
+    "print -69;"
     "for(var a = 0;a<5; a = a + 1)"
     "print i;print a;"
     // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
