@@ -783,7 +783,7 @@ void emit(std::vector<Instruction> &program,
       //vyhodnocení pravé strany => výstup ideálně 1 hodnota na zásobníku
       Expr rightSide = expr.children[1];
       emit(program, rightSide);
-      program.push_back(Instruction{.op = OP_STORE, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"}); //:trollhroch: nemusím uživatele instruovat, ať se tomu jménu vyhne, _ v nzevech proměnných nepodporujeme (error při parsování)
+      program.push_back(Instruction{.op = OP_STORE, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"}); //:trollhroch: nemusím uživatele instruovat, ať se tomu jménu vyhne, _ v názvech proměnných nepodporujeme (error při parsování)
 
       //stačilo by vlastně toto
       program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
@@ -806,6 +806,33 @@ void emit(std::vector<Instruction> &program,
       // program.push_back(Instruction{.op = OP_ADD}); //1+1=2
       // program.push_back(Instruction{.op = OP_PUSH, .value = 2});
       // program.push_back(Instruction{.op = OP_EQ});
+    } break;
+    case ET_LESS_EQUAL: {
+      //kvůli vracejícím assignmentům a v budoucnu function callům
+      //zachováváme pořadí vyhodnocování v pův. zdrojáku levá strana a pak pravá strana
+      //levá strana do proměnné
+      Expr leftSide = expr.children[0];
+      emit(program, leftSide);
+      program.push_back(Instruction{
+        .op = OP_STORE, 
+        .value = "leva_strana"
+      });
+      //pravá strana do proměnné
+      Expr rightSide = expr.children[1];
+      emit(program, rightSide);
+      program.push_back(Instruction{
+        .op = OP_STORE,
+        .value = "prava_strana"
+      });
+      //prohození levé a pravé strany
+      //chceme a <= b
+      //provedeme !(b < a) tedy !(b > a)
+      //(takhle to otáčet jako v matice už můžem,
+      //protože jsme zachovali to pořadí vyhodnocení levá a pak pravá nahoře než jsme to dali do proměnných)
+      program.push_back(Instruction{.op = OP_LOAD, .value = "prava_strana"});
+      program.push_back(Instruction{.op = OP_LOAD, .value = "leva_strana"});
+      program.push_back(Instruction{.op = OP_LT});
+      program.push_back(Instruction{.op = OP_NOT});
     } break;
     case ET_IF: {
       Expr condition = expr.children[0];
@@ -1078,7 +1105,12 @@ int main(){
   //   "print i;print a;"
   //   // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
   // "}"
-  "var neco=!!!0;"//-!0+25*3+3-5-1/6;"
+  // "var neco=(!!!0 <= 1);"
+  "var r = 1;"
+  "var neco=((r = r*-1) <= r-1);"//-!0+25*3+3-5-1/6;"
+  "print neco;"
+  "r = 1;"
+  "var neco=((r = -r) <= r-1);"//-!0+25*3+3-5-1/6;"
   "print neco;";
     //tohle je nested loop
   //   "print 64;"
