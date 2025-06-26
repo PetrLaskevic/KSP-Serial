@@ -122,9 +122,8 @@ std::string prefixPrint(Expr& node, int identLevel = 1);
 
 Expr printStatement(TokenScanner &ts) {
   Expr value = expression(ts);
-  std::cout << "printStatement called\n";
   //v statement teď je early return na printStatement, tak ; check dám i sem
-   if(!ts.match(TK_SEMICOLON)){
+  if(!ts.match(TK_SEMICOLON)){
     ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(value) + "\n");
   }
   return Expr(ET_PRINT, {value});
@@ -341,7 +340,6 @@ Expr multiplication(TokenScanner &ts) {
 }
 
 Expr addition(TokenScanner &ts) {
-  std::cout << "Dostali jsme se sem\n";
   Expr left = multiplication(ts);
 
   while(ts.check(TK_PLUS) || ts.check(TK_MINUS)){
@@ -570,6 +568,7 @@ void emit(std::vector<Instruction> &program,
     => jsou to ty případy, které si pro podstrom samy volají emit, protože po výsledku podstromu - instrukcích
     potřebují něco dát na zásobník (a jinak to moc rozumně afaik nejde)*/
     if(
+      expr.type != ET_NOT &&
       expr.type != ET_NEGATE &&
       expr.type != ET_ASSIGN &&
       expr.type != ET_PRINT &&
@@ -603,6 +602,11 @@ void emit(std::vector<Instruction> &program,
     } break;
     case ET_SUBTRACT: {
       program.push_back(Instruction{.op = OP_SUB});
+    } break;
+    case ET_NOT: {
+      cout << "p " << prefixPrint(expr.children[0]) << "\n";
+      emit(program, expr.children[0]);
+      program.push_back(Instruction{.op = OP_NOT});
     } break;
     case ET_NEGATE: {
       program.push_back(Instruction{.op = OP_PUSH, .value = 0});
@@ -1056,24 +1060,26 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 500;" //this alone puts three things on the stack
-  // "print a*2;"
-  "while ((a = a - 1) >= 0) print a;"
-  "print 65535;"
+  // "var a = 5;" //this alone puts three things on the stack
+  // // "print a*2;"
+  // "while ((a = a - 1) >= 0) print a;"
+  // "print 65535;"
 
   //stack length 21 pro  "for (var i = 10; i < 20; i = i + 1) a empty block uvnitř
   //fixed var i = 10 in for loop putting a stray value
   //now it is 20 (19 from loop, 1 from block I suppose)
-  "for (var i = 10; i < 110; i = i + 1) {"
-    "var delitelne2 = i / 2 == (i + 1) / 2;"
-    "print delitelne2;"
-    "if (delitelne2) print i;"
-    "else print i*i;"
-    "print -69;"
-    "for(var a = 0;a<5; a = a + 1)"
-    "print i;print a;"
-    // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
-  "}";
+  // "for (var i = 10; i < 35; i = i + 1) {"
+  //   "var delitelne2 = i / 2 == (i + 1) / 2;"
+  //   "print delitelne2;"
+  //   "if (delitelne2) print i;"
+  //   "else print i*i;"
+  //   "print -69;"
+  //   "for(var a = 0;a<5; a = a + 1)"
+  //   "print i;print a;"
+  //   // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
+  // "}"
+  "var neco=!!!0;"//-!0+25*3+3-5-1/6;"
+  "print neco;";
     //tohle je nested loop
   //   "print 64;"
   //   "var vysledek = 1;"
