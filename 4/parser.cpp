@@ -268,7 +268,8 @@ Expr block(TokenScanner &ts) {
   while (!ts.match(TK_RBRACE) && !ts.isAtEnd()) {
     statements.push_back(statement(ts));
   }
-
+  //i block statement nově bude vracet
+  statements.push_back(Expr(ET_LITERAL, "0"));
   return Expr(ET_BLOCK, statements);
 }
 
@@ -495,7 +496,6 @@ std::string printExprTree(Expr& node){
   if(node.type == ET_VAR){
     return "var " + node.value;
   }
-  //TODO: přidat to string příkazy
 
   bool isBinaryOP = (binaryExprOperatorToString(node) != "");
   if(isBinaryOP){
@@ -508,6 +508,10 @@ std::string printExprTree(Expr& node){
     return "[" + unaryExprOperatorToString(node) + printExprTree(node.children[0]) + "]";
   }
   if(node.type == ET_BLOCK){
+    //to avoid segmentation fault on empty blocks
+    if(node.children.size() == 0){
+      return "EMPTY BLOCK";
+    }
     return printExprTree(node.children[0]);
   }
   return "UNHANDLED TOKEN";
@@ -670,8 +674,10 @@ void emit(std::vector<Instruction> &program,
       Expr printedExpression = expr.children[0];
       //hopefully ten výraz dá něco na zásobník
       emit(program, printedExpression);
-      //protože instrukce OP_PRINT z něj hodnotu sebere a vypíše ji
+      //instrukce OP_PRINT z něj hodnotu vypíše, ale nesebere
       program.push_back(Instruction{.op = OP_PRINT});
+      //tj, díky tomu emitu, kde je PUSH v na ET_LITERAL nebo ET_NAME
+      //vrací i ET_PRINT hodnotu 
     } break;
     case ET_LITERAL: {
       // Tady konečně naparsujeme číslo ze stringu
@@ -704,6 +710,8 @@ void emit(std::vector<Instruction> &program,
       //DEFAULT HODNOTA BUDE 0
       program.push_back(Instruction{.op = OP_PUSH, .value=0});
       program.push_back(Instruction{.op = OP_STORE, .value = expr.value });
+      //protože všechny přikazy budou nově něco vracet:
+      program.push_back(Instruction{.op = OP_PUSH, .value=0});
     } break;
     case ET_ASSIGN: {
       std::cout << "ASSIGN\n";
@@ -857,11 +865,15 @@ void emit(std::vector<Instruction> &program,
       Expr if_true = expr.children[1];
       Expr if_false = expr.children[2];
       emit_condition(program, condition, if_true, if_false);
+      //ať if taky něco vrací
+      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
     } break;
     case ET_WHILE: {
       Expr condition = expr.children[0];
       Expr body = expr.children[1];
       emit_while(program, condition, body);
+      //ať while taky něco vrací
+      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
     } break;
     case ET_FOR: {
       Expr init = expr.children[0];
@@ -869,6 +881,8 @@ void emit(std::vector<Instruction> &program,
       Expr expression = expr.children[2];
       Expr body = expr.children[3];
       emit_for(program, init, condition, expression, body);
+      //ať for taky něco vrací
+      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
     } break;
   } 
 }
@@ -1025,26 +1039,27 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 5;"
+  "var a = 5;" //this alone puts three things on the stack
+  "print a;"
   "while ((a = a - 1) >= 0) {"
     "print a;"
-  "}"
-  "print 65535;"
-  "for (var i = 10; i < 20; i = i + 1) {"
-    "var delitelne2 = i / 2 == (i + 1) / 2;"
-    "print delitelne2;"
-    "if (delitelne2) {"
-    "  print i;"
-  "}"
-    //tohle je nested loop
-    "print 64;"
-    "var vysledek = 1;"
-    "var faktorial = 12;"
-    "while(faktorial){"
-    "  vysledek = vysledek * faktorial;"
-    "  faktorial = faktorial - 1;"
-    "}"
-  "print vysledek;}";
+  "}";
+  // "print 65535;"
+  // "for (var i = 10; i < 20; i = i + 1) {"
+  //   "var delitelne2 = i / 2 == (i + 1) / 2;"
+  //   "print delitelne2;"
+  //   "if (delitelne2) {"
+  //   "  print i;"
+  // "}"
+  //   //tohle je nested loop
+  //   "print 64;"
+  //   "var vysledek = 1;"
+  //   "var faktorial = 12;"
+  //   "while(faktorial){"
+  //   "  vysledek = vysledek * faktorial;"
+  //   "  faktorial = faktorial - 1;"
+  //   "}"
+  // "print vysledek;}";
 
     // "var a = 0;"
     // "for(a = 0; a < 8; a = a + 1){"
@@ -1161,5 +1176,8 @@ int main(){
   std::unordered_map<std::string, int> vars;
   interpret(program, stack, vars);
   cout << "Stack length: " << stack.size() << "\n";
+  for(auto el: stack){
+    cout << el << "\n";
+  }
   cout << "Hello world\n"; //abych si mohl dát breakpoint za interpret
 }
