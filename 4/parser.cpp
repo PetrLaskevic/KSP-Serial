@@ -949,6 +949,12 @@ void emit_while(std::vector<Instruction> &program,
 
   emit(program, whileBody);
 
+  if(whileBody.type != ET_BLOCK){
+    //pokud to je ten `var a = 50;while ((a = a - 1) >= 0) print a;` případ
+    // (není tedy block za while, ale jedna věc)
+    program.push_back(Instruction{.op=OP_POP});
+  }
+
   //unconditional jump na ověřování podmínky (další iterace) 
   program.push_back(Instruction{
     .op = OP_PUSH,
@@ -1050,11 +1056,9 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 5;" //this alone puts three things on the stack
+  "var a = 500;" //this alone puts three things on the stack
   // "print a*2;"
-  "while ((a = a - 1) >= 0) {"
-    "print a;"
-  "}"
+  "while ((a = a - 1) >= 0) print a;"
   "print 65535;"
 
   //stack length 21 pro  "for (var i = 10; i < 20; i = i + 1) a empty block uvnitř
