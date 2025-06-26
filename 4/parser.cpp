@@ -269,7 +269,8 @@ Expr block(TokenScanner &ts) {
     statements.push_back(statement(ts));
   }
   //i block statement nově bude vracet
-  statements.push_back(Expr(ET_LITERAL, "0"));
+  // statements.push_back(Expr(ET_LITERAL, "0"));
+  // => radši se o to postará nově emit_block
   return Expr(ET_BLOCK, statements);
 }
 
@@ -614,6 +615,9 @@ void emit_for(std::vector<Instruction> &program,
               Expr &conditionChanger,
               Expr &body);
 
+void emit_block(std::vector<Instruction> &program,
+                std::vector<Expr> &statements);
+
 void emit(std::vector<Instruction> &program,
           Expr &expr) {
 
@@ -641,7 +645,8 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_NOT_EQUAL &&
       expr.type != ET_IF &&
       expr.type != ET_WHILE &&
-      expr.type != ET_FOR
+      expr.type != ET_FOR &&
+      expr.type != ET_BLOCK
     ){
       for (auto& operand : expr.children) {
         std::cout << "operand: " << allOPToString(operand) << "\n"; 
@@ -728,6 +733,7 @@ void emit(std::vector<Instruction> &program,
       //tak musíme v assignmentu než zkusíme LOAD tak nejdřív proměnnou deklarovat
       if(leftSide.type == ET_VAR){
         emit(program, leftSide);
+        program.push_back(Instruction{.op=OP_POP});
       }
       //leftSide Expr(ET_VAR, varName); má .value = varName = název proměnné
       //rightSide je výraz napravo od rovnítka, z čehož bude sekvence instrukcí
@@ -882,9 +888,46 @@ void emit(std::vector<Instruction> &program,
       Expr body = expr.children[3];
       emit_for(program, init, condition, expression, body);
       //ať for taky něco vrací
-      program.push_back(Instruction{.op = OP_PUSH, .value = 0});
+      // program.push_back(Instruction{.op = OP_PUSH, .value = 0});
+    } break;
+    case ET_BLOCK: {
+      //přidává runtime OP_POP instrukce, aby nebyl memory leak,
+      //protože všechno vrací hodnotu na stack (hack)
+      emit_block(program, expr.children);
     } break;
   } 
+}
+
+void emit_block(std::vector<Instruction> &program,
+                std::vector<Expr> &statements) {
+  if (statements.empty()) {
+    program.push_back(
+        Instruction{.op = OP_PUSH, .value = 0});
+  } else {
+    for (size_t i = 0; i < size(statements); i++) {
+      //referenční verze mi na programu:
+      // "var a = 5;"
+      // "print a;"
+      // "while ((a = a - 1) >= 0) {"
+      //   "print a;"
+      // "}"
+      //nechala 7 věcí
+      // if (i > 0) {
+      //   program.push_back(
+      //       Instruction{.op = OP_POP, .value = 0});
+      // }
+      // emit(program, statements[i]);
+      //vs tahle moje nechala 1 věc
+      //(logicky mi to dává smysl - vyrobit instrukce 
+      //pro AST node pro celý expressiony ("řádky") => pak uklidit)
+      //(přičemž z nějakého důvodu je jedno, jestli v block() nechám:
+      //  //i block statement nově bude vracet
+      // statements.push_back(Expr(ET_LITERAL, "0"));)
+      //nebo ne
+      emit(program, statements[i]);
+      // program.push_back(Instruction{.op = OP_POP, .value = 0});
+    }
+  }
 }
 
 void emit_condition(std::vector<Instruction> &program,
@@ -1039,18 +1082,18 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a = 5;" //this alone puts three things on the stack
-  "print a;"
-  "while ((a = a - 1) >= 0) {"
-    "print a;"
-  "}"
-  "print 65535;"
-  "for (var i = 10; i < 20; i = i + 1) {"
-    "var delitelne2 = i / 2 == (i + 1) / 2;"
-    "print delitelne2;"
-    "if (delitelne2) {"
-    "  print i;"
-  "}"
+  "var a = 5;"; //this alone puts three things on the stack
+  // "print a;"
+  // "while ((a = a - 1) >= 0) {"
+  //   "print a;"
+  // "}"
+  // "print 65535;"
+  // "for (var i = 10; i < 20; i = i + 1) {"
+  //   "var delitelne2 = i / 2 == (i + 1) / 2;"
+  //   "print delitelne2;"
+  //   "if (delitelne2) {"
+  //   "  print i;"
+  // "}";
     //tohle je nested loop
     "print 64;"
     "var vysledek = 1;"
