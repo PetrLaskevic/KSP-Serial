@@ -25,6 +25,8 @@ enum TokenType {
   TK_LESS_EQUAL, TK_LBRACE, TK_LPAREN, TK_RBRACE,
   TK_RPAREN,
 
+  TK_AND, TK_OR,
+
   // Klíčová slova
   TK_ELSE, TK_FOR, TK_IF, TK_PRINT, TK_VAR,
   TK_WHILE,
@@ -75,6 +77,8 @@ std::string token_type_to_str(TokenType t) {
     case  TK_LPAREN: return "LPAREN";
     case  TK_RBRACE: return "RBRACE";
     case  TK_RPAREN: return "RPAREN";
+    case  TK_AND: return "AND";
+    case  TK_OR: return "OR";
     case  TK_ELSE: return "ELSE";
     case  TK_FOR: return "FOR";
     case  TK_IF: return "IF";
@@ -176,6 +180,18 @@ match_operator_token(Scanner &sc) {
     if(sc.match('(')) return Token(TK_LPAREN, "", sc.row, beganTokenAtCol);
     if(sc.match('}')) return Token(TK_RBRACE, "", sc.row, beganTokenAtCol);
     if(sc.match(')')) return Token(TK_RPAREN, "", sc.row, beganTokenAtCol);
+    //podpora && (& zatím ne)
+    if(sc.match('&')){
+      if(sc.match('&')){
+        return Token(TK_AND, "", sc.row, beganTokenAtCol);
+      }
+    }
+    //podpora || (| zatím ne)
+    if(sc.match('|')){
+      if(sc.match('|')){
+        return Token(TK_OR, "", sc.row, beganTokenAtCol);
+      }
+    }
 
     //no operator matched
     return std::nullopt;

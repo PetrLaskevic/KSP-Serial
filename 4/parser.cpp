@@ -1120,34 +1120,37 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  // "var a = 5;" //this alone puts three things on the stack
-  // // "print a*2;"
+  "var a;"
+  "var b;"
+  "if((a && b) || c) print 1;";
   // "while ((a = a - 1) >= 0) print a;"
   // "print 65535;"
 
-  //stack length 21 pro  "for (var i = 10; i < 20; i = i + 1) a empty block uvnitř
-  //fixed var i = 10 in for loop putting a stray value
-  //now it is 20 (19 from loop, 1 from block I suppose)
+  //for loops don't leak the stack test
   // "for (var i = 10; i < 35; i = i + 1) {"
   //   "var delitelne2 = i / 2 == (i + 1) / 2;"
-  //   "print delitelne2;"
+  //   // "print delitelne2;"
   //   "if (delitelne2) print i;"
-  //   "else print i*i;"
-  //   "print -69;"
-  //   "for(var a = 0;a<5; a = a + 1)"
-  //   "print i;print a;"
+  //   // "else print i*i;"
+  //   // "print -69;"
+  //   // "for(var a = 0;a<5; a = a + 1)"
+  //   // "print i;print a;"
   //   // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
-  // "}"
+  // "}";
   // "var neco=(!!!0 <= 1);"
-  "var r = 1;"
-  "var neco=((r = r*-1) <= r-1);"//-!0+25*3+3-5-1/6;"
-  "print neco;"
-  "r = 1;"
-  "if((neco / 2) + 2 - neco) print -222;"
-  "else print -99;"
-  "if(6){print 2;print -2;if(neco == 6) print neco; if(neco == 7){print 0;}else{print -1;}while(neco > 3){print -2;print 25;if(neco){}else{print neco;}}}"
-  "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
-  "print neco;";
+
+  //nested conditions parsing example
+  // "var r = 1;"
+  // "var neco=((r = r*-1) <= r-1);"//-!0+25*3+3-5-1/6;"
+  // "print neco;"
+  // "r = 1;"
+  // "if((neco / 2) + 2 - neco) print -222;"
+  // "else print -99;"
+  // "if(6){print 2;print -2;if(neco == 6) print neco; if(neco == 7){print 0;}else{print -1;}while(neco > 3){print -2;print 25;if(neco){}else{print neco;}}}"
+  // "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
+  // "print neco;";
+
+
     //tohle je nested loop
   //   "print 64;"
   //   "var vysledek = 1;"
