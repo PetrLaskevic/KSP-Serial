@@ -542,7 +542,7 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   if(op[op.length() - 1] == ','){
     op.pop_back();
   }else{
-    std::cout << "for " << op << " fun\n";
+    // std::cout << "for " << op << " fun\n";
   }
   
   //TOHLE POP OČEKÁVALO, ŽE BUDE NA KONCI ;\n, tak si ho znova přidáme
@@ -553,8 +553,10 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   // }
 
   if(node.type != ET_IF){
+    //když je to clock, tak je ta závorka na samostatném řádku, a chceme, aby byla na stejné úrovni jako její úvodní BLOCK
     if(node.type == ET_BLOCK){
-
+      whiteSpaceUsed.pop_back();
+      whiteSpaceUsed.pop_back();
     }
     op += whiteSpaceUsed + color + ")" + noColor;
   }
