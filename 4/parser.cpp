@@ -490,6 +490,13 @@ printColorETpair allOPToString(Expr& node){
   }
 }
 //vypise strom prefixove, jakoby vznikl sekvenci techto jakoby function callu na zasobniku
+//vypisuje s barvickami, 256 color terminal na Linuxu potreba
+//cilem byla prehlednost a jednoznacnost, abych vedel, jak vypada AST (asociativita tady jasna, co s cim v zavorkach "callu")
+//dalsi cil byl taky aby to pripominalo puvodni zdrojak jak to jenom jde, aby v tom slo rychle hledat
+//=> proto treba IF ma tolik specialniho treatmentu,
+//   nacpat na jednu radku / pod sebe if body a else body by nebylo prehledne
+//(a kdyz else body je prazdny (else pripad v puvodnim zdrojaku nebyl), tak ho to nebude vypisovat)
+//cilem byla prehlednost, nechtel jsem druhou implementaci variable prohlizece z debuggeru, ktery to bere ~ jako JSON object
 std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, coz definuju nahore std::string prefixPrint(Expr& node, int identLevel = 1);
   auto colorPair = allOPToString(node);
   std::string color = colorPair.color;
@@ -1247,11 +1254,10 @@ int main(){
   std::cout << '\n';
 
   TokenScanner tokenScanner = TokenScanner(ts);
-  // std::cout << tokenScanner.isAtEnd() << "\n";
-  // auto ast = expression(tokenScanner);
-  // std::cout << printExprTree(ast) << "\n";
+
   auto ast = block(tokenScanner);
-  std::cout << "PUVODNI___________ " << source << "_________\n";
+  std::cout << "PUVODNI ZDROJAK STRIPPED OF WHITESPACE____" << source << "\n";
+  std::cout << "Vytisknuty AST:\n";
   std::cout << "\n" << prefixPrint(ast) << "\n";
   std::cout << "__________________________________________\n";
   std::cout << "\nProgram output:\n\n";
