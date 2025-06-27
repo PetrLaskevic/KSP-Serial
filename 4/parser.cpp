@@ -515,11 +515,16 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   std::string whiteSpaceUsed;
   if(node.type == ET_IF){
     op += spacingBetweenArguments + prefixPrint(node.children[0], identLevel + 1) +
-    color + "){\u001b[0m\n" + ident + prefixPrint(node.children[1], identLevel + 1) + color + 
-    "\n" + spacingBetweenArguments + spacingBetweenArguments + color + "}" + noColor;
+    color + "){\u001b[0m\n" + ident + prefixPrint(node.children[1], identLevel + 1) + color;
+    //for closing } after IF
+    //same as with closing ) after BLOCK, pop back twice
+    ident.pop_back();
+    ident.pop_back();
+    op += "\n" + ident + color + "}" + noColor;
     if(node.children[2].children.size() != 0){
-      op += color + "ELSE{\n" + noColor + ident + prefixPrint(node.children[2], identLevel + 1) +
-      "\n" + spacingBetweenArguments + spacingBetweenArguments + color + "}" + noColor;
+                                        //ident + "  " because we did pop_back for closing } after if
+      op += color + "ELSE{\n" + noColor + ident + "  " + prefixPrint(node.children[2], identLevel + 1) +
+      "\n" + ident + color + "}" + noColor;
     }
   }else{
     if(node.type == ET_BLOCK){
@@ -532,28 +537,21 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
     }
     for(Expr child: node.children){
       auto addition = whiteSpaceUsed + prefixPrint(child, identLevel) + separator;
-      std::cout << "____________________________\n";
-      std::cout << addition << "\n";
-      std::cout << "____________________________\n";
+      //nice debugging log = ukazuje rekurzi v této funkcim jak od provolání k listům staví stringy
+      // std::cout << "____________________________\n";
+      // std::cout << addition << "\n";
+      // std::cout << "____________________________\n";
       op += addition;
     }
   }
-  //remove the last ","
+  //remove the last "," if we had a ADD(... , ... , ... , case
+  //and do nothing if the last thing in op was string of if statement (== the serialized if statement)
   if(op[op.length() - 1] == ','){
     op.pop_back();
-  }else{
-    // std::cout << "for " << op << " fun\n";
   }
   
-  //TOHLE POP OČEKÁVALO, ŽE BUDE NA KONCI ;\n, tak si ho znova přidáme
-  //akorát že vůbec => může být přechozí content op z IF, kde poslední je ; a nikoli \n
-  // => takže přihodíme \n a máme další if block unindented (protože whitespace z přechozího volání)
-  // if(node.type == ET_BLOCK){
-  //   op += "\n";
-  // }
-
   if(node.type != ET_IF){
-    //když je to clock, tak je ta závorka na samostatném řádku, a chceme, aby byla na stejné úrovni jako její úvodní BLOCK
+    //když je to block, tak je ta závorka na samostatném řádku, a chceme, aby byla na stejné úrovni jako její úvodní BLOCK
     if(node.type == ET_BLOCK){
       whiteSpaceUsed.pop_back();
       whiteSpaceUsed.pop_back();
@@ -1140,7 +1138,7 @@ int main(){
   "r = 1;"
   "if((neco / 2) + 2 - neco) print -222;"
   "else print -99;"
-  "if(6){print 2;}"
+  "if(6){print 2;print -2;if(neco == 6) print neco; if(neco == 7){print 0;}else{print -1;}while(neco > 3){print -2;print 25;if(neco){}else{print neco;}}}"
   "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
   "print neco;";
     //tohle je nested loop
