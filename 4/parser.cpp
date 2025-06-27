@@ -427,7 +427,7 @@ Expr comparison(TokenScanner &ts) {
       kde to nebude na nic matchovat a probublá se to do primary, které hodí výjimku*/
     // přesto ale budu zdvořilejší, a řeknu užívateli, v čem je problém:
     if(isEqualityOp(ts.peek().type)){
-      ts.error("Nepodporujeme řetězení porovnávacích ani logických operátorů bez explicitního či validního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
+      ts.error("Nepodporujeme řetězení porovnávacích ani logických operátorů bez explicitního validního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
     }
     return Expr(TKtoExprType(nextToken), {left, right});
   }
@@ -630,7 +630,9 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_IF &&
       expr.type != ET_WHILE &&
       expr.type != ET_FOR &&
-      expr.type != ET_BLOCK
+      expr.type != ET_BLOCK &&
+      expr.type != ET_AND &&
+      expr.type != ET_OR
     ){
       for (auto& operand : expr.children) {
         std::cout << "operand: " << allOPToString(operand).text << "\n"; 
@@ -911,6 +913,73 @@ void emit(std::vector<Instruction> &program,
       //protože všechno vrací hodnotu na stack (hack)
       emit_block(program, expr.children);
     } break;
+    case ET_AND: {
+      //stejně jako u == operátorů jsem zakázal asociativitu, vyžaduji explicitně závorky
+      //třeba shortcircuiting:
+      //nejdřív vyhodnotit levou stranu, pak EQ s 0
+      //když ano, tak OP_BRANCH na end
+      //vyhodnotit pravou stranu EQ s 0
+      //jump na end
+      Expr leftSide = expr.children[0];
+      Expr rightSide = expr.children[1];
+
+      emit(program, leftSide);
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 0
+      });
+      program.push_back(Instruction{
+        .op = OP_EQ
+      });
+      int branchAddr = size(program);
+      program.push_back(Instruction{
+        .op = OP_BRANCH
+      }); //value konce zapíšeme později
+
+      //pokud jsme došli sem, tak kontrolujeme druhou podmínku (první byla 1)
+      emit(program, rightSide);
+      //takže tahle potřebuje být taky 1 (truthy tedy != 0)
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 0
+      });
+ 
+      //dá tu 1 nebo 0 na zásobník, 
+      //(případy (1 && 1) a (1 && 0))
+      program.push_back(Instruction{
+        .op = OP_EQ
+      });
+      program.push_back(Instruction{
+        .op = OP_NOT
+      });
+      
+      //odsud ale musíme unconditionally skočit na konec na NOP
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 1
+      });
+
+      int completelyTestedJumpToEndAddr = size(program);
+      program.push_back(Instruction{
+        .op = OP_BRANCH,
+        .value = completelyTestedJumpToEndAddr + 2
+      });
+
+      //end = shortcircuit z 1. podmínky, manuálně returnujeme 0
+      //(tam jsme měli jen OP_EQ a OP_BRANCH, který přeskočil check druhé podmínky)
+      auto endRet0Addr = size(program);
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 0
+      });
+      //zápis do OP_BRANCH abychom se sem tím short circuitem tam dostali
+      program[branchAddr].value = (int)endRet0Addr;
+
+      program.push_back(Instruction{
+        .op = OP_NOP
+      });
+
+    }
   } 
 }
 
@@ -1137,7 +1206,14 @@ int main(){
   std::string source = //"var a = 3;a=6;print a;";
   "var a;"
   "var b;"
-  "if((a && b) || c) print 1;";
+  "var c = 6;"
+  "if(!a && !b && 2) print 1;"
+  "print -200;"
+  "print 1 && 2;"
+  "print -2 && 2;"
+  "print -1 && 0;"
+  "print 0 && -1;"
+  "print 0 && 0;";
   // "while ((a = a - 1) >= 0) print a;"
   // "print 65535;"
 
