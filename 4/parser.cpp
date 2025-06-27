@@ -453,38 +453,48 @@ Expr expression(TokenScanner &ts) {
   return assignment(ts);
 }
 
-std::string allOPToString(Expr& node){
+struct printColorETpair{
+  std::string color;
+  std::string text;
+};
+
+printColorETpair allOPToString(Expr& node){
   ExprType t = node.type;
+  //white normal terminal color
+  const char defaultColor[] = "\u001b[0m";
   switch (t) {
     // binární operátory
-    case ET_MULTIPLY: return "MUL";
-    case ET_DIVIDE: return "DIV";
-    case ET_ADD: return "ADD";
-    case ET_SUBTRACT: return "SUBST";
-    case ET_LESS: return "LESS";
-    case ET_LESS_EQUAL: return "LESS_EQ";
-    case ET_GREATER: return "MORE";
-    case ET_GREATER_EQUAL: return "MORE_EQ";
-    case ET_EQUAL: return "EQ";
-    case ET_NOT_EQUAL: return "NOT_EQ";
-    case ET_ASSIGN: return "ASSIGN";
-    case ET_NEGATE: return "UN_MIN"; //unary minus
-    case ET_NOT: return "NOT";
-    case ET_BLOCK: return "BLOCK";
-    case ET_PRINT: return "PRINT";
-    case ET_VAR: return "VAR_DECL";
-    case ET_LITERAL: return "LITERAL";
-    case ET_NAME: return "VAR_USE";
-    case ET_IF: return "IF";
-    case ET_WHILE: return "WHILE";
-    case ET_FOR: return "FOR";
+    case ET_MULTIPLY: return {"\033[38;5;105m" , "MUL"};
+    case ET_DIVIDE: return {"\033[48;5;42m", "DIV"};
+    case ET_ADD: return {"\033[38;5;208m", "ADD"};
+    case ET_SUBTRACT: return {"\033[38;5;11m", "SUBST"};
+    case ET_LESS: return {"\033[38;5;160m", "LESS"};
+    case ET_LESS_EQUAL: return {"\033[38;5;206m", "LESS_EQ"};
+    case ET_GREATER: return {"\033[38;5;81m", "MORE"};
+    case ET_GREATER_EQUAL: return {"\033[38;5;135m", "MORE_EQ"};
+    case ET_EQUAL: return {"\u001b[30;7;96m", "EQ"};
+    case ET_NOT_EQUAL: return {defaultColor, "NOT_EQ"};
+    case ET_ASSIGN: return {"\033[38;5;76m", "ASSIGN"};
+    case ET_NEGATE: return {defaultColor, "UN_MIN"}; //unary minus
+    case ET_NOT: return {defaultColor, "NOT"};
+    case ET_BLOCK: return {defaultColor, "BLOCK"};
+    case ET_PRINT: return {defaultColor, "PRINT"};
+    case ET_VAR: return {defaultColor, "VAR_DECL"};
+    case ET_LITERAL: return {defaultColor, "LITERAL"}; 
+    case ET_NAME: return {defaultColor, "VAR_USE"};
+    case ET_IF: return {"\033[38;5;202m", "IF"};
+    case ET_WHILE: return {"\033[38;5;202m", "WHILE"};
+    case ET_FOR: return {"\033[38;5;202m", "FOR"};
     //nic není pravda
-    default: return "";
+    default: return {defaultColor, ""};
   }
 }
 //vypise strom prefixove, jakoby vznikl sekvenci techto jakoby function callu na zasobniku
 std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, coz definuju nahore std::string prefixPrint(Expr& node, int identLevel = 1);
-  std::string op = allOPToString(node);
+  auto colorPair = allOPToString(node);
+  std::string color = colorPair.color;
+  std::string op = colorPair.text;
+  const char noColor[] = "\u001b[0m";
   //leaves
   if(node.type == ET_LITERAL){
     return "LIT(" + node.value + ")";
@@ -497,7 +507,7 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   }
   //any number of children: ET_BLOCK
   //expressions: 2 children (binary operators) or 1 child (unary operators)
-  op = op + "(";
+  op = color + op + "(\u001b[0m";
   std::string separator = ",";
   std::string ident(identLevel*2, ' ');
   if(node.type == ET_BLOCK){
@@ -510,9 +520,11 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   if(node.type == ET_IF){
     identLevel++;
     op += usedIdent + prefixPrint(node.children[0], identLevel) +
-    "{\n" + ident + prefixPrint(node.children[1], identLevel) + "}";
+    color + "){\u001b[0m\n" + ident + prefixPrint(node.children[1], identLevel) + color + 
+    "\n" + usedIdent + usedIdent + color + "}" + noColor;
     if(node.children[2].children.size() != 0){
-      op += "ELSE{\n" + ident + prefixPrint(node.children[2], identLevel) + "}";
+      op += color + "ELSE{\n" + noColor + ident + prefixPrint(node.children[2], identLevel) +
+      "\n" + usedIdent + usedIdent + color + "}" + noColor;
     }
   }else{
     for(Expr child: node.children){
@@ -531,7 +543,9 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   if(usedIdent.size() > 0){
     usedIdent.pop_back();
   }
-  op += usedIdent + ")";
+  if(node.type != ET_IF){
+    op += usedIdent + color + ")" + noColor;
+  }
   return op;
 
   std::cerr << "unhandled node in prefixPrint\n";
@@ -585,7 +599,7 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_BLOCK
     ){
       for (auto& operand : expr.children) {
-        std::cout << "operand: " << allOPToString(operand) << "\n"; 
+        std::cout << "operand: " << allOPToString(operand).text << "\n"; 
         emit(program, operand);
       }
     }
@@ -1110,7 +1124,9 @@ int main(){
   "var neco=((r = r*-1) <= r-1);"//-!0+25*3+3-5-1/6;"
   "print neco;"
   "r = 1;"
-  "var neco=((r = -r) <= r-1);"//-!0+25*3+3-5-1/6;"
+  "if((neco / 2) + 2 - neco) print -222;"
+  "else print -99;"
+  "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
   "print neco;";
     //tohle je nested loop
   //   "print 64;"
