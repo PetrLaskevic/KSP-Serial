@@ -438,10 +438,10 @@ Expr assignment(TokenScanner &ts) {
   if (ts.match(TK_EQUAL)) {
     Expr right = assignment(ts);
     // var neco=-!0+25*3+3-5-1/6;
-    std::cout << "ooooooooooooooooooooo\n";
-    std::cout << prefixPrint(left) << "\n";
-    std::cout << prefixPrint(right) << "\n";
-    std::cout << "ooooooooooooooooooooo\n";
+    // std::cout << "ooooooooooooooooooooo\n";
+    // std::cout << prefixPrint(left) << "\n";
+    // std::cout << prefixPrint(right) << "\n";
+    // std::cout << "ooooooooooooooooooooo\n";
     return Expr(ET_ASSIGN, {left, right});
   }
   return left;
@@ -465,11 +465,11 @@ printColorETpair allOPToString(Expr& node){
   switch (t) {
     // binární operátory
     case ET_MULTIPLY: return {"\033[38;5;105m" , "MUL"};
-    case ET_DIVIDE: return {"\033[48;5;42m", "DIV"};
+    case ET_DIVIDE: return {"\033[38;5;42m", "DIV"};
     case ET_ADD: return {"\033[38;5;208m", "ADD"};
     case ET_SUBTRACT: return {"\033[38;5;11m", "SUBST"};
     case ET_LESS: return {"\033[38;5;160m", "LESS"};
-    case ET_LESS_EQUAL: return {"\033[38;5;206m", "LESS_EQ"};
+    case ET_LESS_EQUAL: return {"\033[38;5;15m\033[48;5;165m", "LESS_EQ"};
     case ET_GREATER: return {"\033[38;5;81m", "MORE"};
     case ET_GREATER_EQUAL: return {"\033[38;5;135m", "MORE_EQ"};
     case ET_EQUAL: return {"\u001b[30;7;96m", "EQ"};
@@ -510,41 +510,53 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   op = color + op + "(\u001b[0m";
   std::string separator = ",";
   std::string ident(identLevel*2, ' ');
-  if(node.type == ET_BLOCK){
-    op += "\n";
-    separator = ";\n";
-    identLevel++;
-  }
-  std::string usedIdent = " ";
 
+  std::string spacingBetweenArguments = " ";
+  std::string whiteSpaceUsed;
   if(node.type == ET_IF){
-    identLevel++;
-    op += usedIdent + prefixPrint(node.children[0], identLevel) +
-    color + "){\u001b[0m\n" + ident + prefixPrint(node.children[1], identLevel) + color + 
-    "\n" + usedIdent + usedIdent + color + "}" + noColor;
+    op += spacingBetweenArguments + prefixPrint(node.children[0], identLevel + 1) +
+    color + "){\u001b[0m\n" + ident + prefixPrint(node.children[1], identLevel + 1) + color + 
+    "\n" + spacingBetweenArguments + spacingBetweenArguments + color + "}" + noColor;
     if(node.children[2].children.size() != 0){
-      op += color + "ELSE{\n" + noColor + ident + prefixPrint(node.children[2], identLevel) +
-      "\n" + usedIdent + usedIdent + color + "}" + noColor;
+      op += color + "ELSE{\n" + noColor + ident + prefixPrint(node.children[2], identLevel + 1) +
+      "\n" + spacingBetweenArguments + spacingBetweenArguments + color + "}" + noColor;
     }
   }else{
+    if(node.type == ET_BLOCK){
+      whiteSpaceUsed = ident; //existing ident plus one level more
+      op += "\n";
+      separator = ";\n";
+      identLevel++;
+    }else{
+      whiteSpaceUsed = spacingBetweenArguments;
+    }
     for(Expr child: node.children){
-      if(node.type == ET_BLOCK){
-        usedIdent = ident;
-      }
-      op += usedIdent + prefixPrint(child, identLevel) + separator;
+      auto addition = whiteSpaceUsed + prefixPrint(child, identLevel) + separator;
+      std::cout << "____________________________\n";
+      std::cout << addition << "\n";
+      std::cout << "____________________________\n";
+      op += addition;
     }
   }
   //remove the last ","
-  op.pop_back();
-  if(node.type == ET_BLOCK){
-    op += "\n";
+  if(op[op.length() - 1] == ','){
+    op.pop_back();
+  }else{
+    std::cout << "for " << op << " fun\n";
   }
-  usedIdent.pop_back();
-  if(usedIdent.size() > 0){
-    usedIdent.pop_back();
-  }
+  
+  //TOHLE POP OČEKÁVALO, ŽE BUDE NA KONCI ;\n, tak si ho znova přidáme
+  //akorát že vůbec => může být přechozí content op z IF, kde poslední je ; a nikoli \n
+  // => takže přihodíme \n a máme další if block unindented (protože whitespace z přechozího volání)
+  // if(node.type == ET_BLOCK){
+  //   op += "\n";
+  // }
+
   if(node.type != ET_IF){
-    op += usedIdent + color + ")" + noColor;
+    if(node.type == ET_BLOCK){
+
+    }
+    op += whiteSpaceUsed + color + ")" + noColor;
   }
   return op;
 
@@ -618,7 +630,7 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_SUB});
     } break;
     case ET_NOT: {
-      cout << "p " << prefixPrint(expr.children[0]) << "\n";
+      // cout << "p " << prefixPrint(expr.children[0]) << "\n";
       emit(program, expr.children[0]);
       program.push_back(Instruction{.op = OP_NOT});
     } break;
@@ -1126,6 +1138,7 @@ int main(){
   "r = 1;"
   "if((neco / 2) + 2 - neco) print -222;"
   "else print -99;"
+  "if(6){print 2;}"
   "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
   "print neco;";
     //tohle je nested loop
