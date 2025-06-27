@@ -88,6 +88,9 @@ enum ExprType {
   ET_EQUAL,
   ET_NOT_EQUAL,
   ET_ASSIGN,
+  //&& a ||
+  ET_AND,
+  ET_OR,
 
   // unární operátory
   ET_NEGATE, //podle zdrojáku unary, s tokenem Minus proste -a = -1 * a //podle názvu by mohlo asi bitwise negation ~ nebo?
@@ -362,6 +365,9 @@ bool isEqualityOp(TokenType t){
     case TK_NOT_EQUAL: return true;
     case TK_GREATER_EQUAL: return true;
     case TK_LESS_EQUAL: return true;
+    //přidáme sem i && a || => protože je to v comparison
+    case TK_AND: return true;
+    case TK_OR: return true;
     default: return false;
   }
 }
@@ -374,6 +380,10 @@ bool isEqualityExpr(ExprType t){
     case ET_GREATER_EQUAL: return true;
     case ET_LESS_EQUAL: return true;
     case ET_NOT_EQUAL: return true;
+    //přidáme sem i && a || => nechceme doplňovat na > 0 (zbytečné)
+    //ač by to ale vlastně šlo 0 > 0 false 1 > 0 true
+    case ET_AND: return true;
+    case ET_OR: return true;
     default: return false;
   }
 }
@@ -386,6 +396,9 @@ ExprType TKtoExprType(TokenType t){
     case TK_NOT_EQUAL: return ET_NOT_EQUAL;
     case TK_GREATER_EQUAL: return ET_GREATER_EQUAL;
     case TK_LESS_EQUAL: return ET_LESS_EQUAL;
+    //přidáme sem i && a || => protože je to v comparison
+    case TK_AND: return ET_AND;
+    case TK_OR: return ET_OR;
     default: {
       std::cerr << "Ani jeden typ nepasoval!\n";
       std::exit(1);
@@ -414,7 +427,7 @@ Expr comparison(TokenScanner &ts) {
       kde to nebude na nic matchovat a probublá se to do primary, které hodí výjimku*/
     // přesto ale budu zdvořilejší, a řeknu užívateli, v čem je problém:
     if(isEqualityOp(ts.peek().type)){
-      ts.error("Nepodporujeme řetězení porovnávacích operátorů bez explicitního či validního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
+      ts.error("Nepodporujeme řetězení porovnávacích ani logických operátorů bez explicitního či validního uzávorkování, chceme př. (a == b) == c"); //omg, ani se nerozbila diakritika
     }
     return Expr(TKtoExprType(nextToken), {left, right});
   }
@@ -485,6 +498,8 @@ printColorETpair allOPToString(Expr& node){
     case ET_IF: return {"\033[38;5;202m", "IF"};
     case ET_WHILE: return {"\033[38;5;202m", "WHILE"};
     case ET_FOR: return {"\033[38;5;202m", "FOR"};
+    case ET_AND: return{"\033[38;5;15m\033[48;5;27m", "AND"};
+    case ET_OR: return{"\033[38;5;221m", "OR"};
     //nic není pravda
     default: return {defaultColor, ""};
   }
