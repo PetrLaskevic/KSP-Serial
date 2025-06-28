@@ -1404,7 +1404,7 @@ int main(){
 
   std::vector<Token> ts = lex(source);
 
-  std::cout << "\ncelkove nalexovano:\n";
+  std::cout << "\nCelkove nalexovano:\n";
   for (auto t : ts) {
     //radky a sloupce indexuju, jako spravny programator, od 0 :D
     if(t.value == ""){ 
@@ -1420,7 +1420,8 @@ int main(){
   TokenScanner tokenScanner = TokenScanner(ts);
 
   auto ast = block(tokenScanner);
-  std::cout << "PUVODNI ZDROJAK STRIPPED OF WHITESPACE____" << source << "\n";
+  std::cout << "PUVODNI ZDROJAK STRIPPED OF WHITESPACE:\n" << source << "\n";
+  std::cout << "__________________________________________\n";
   std::cout << "Vytisknuty AST:\n";
   std::cout << "\n" << prefixPrint(ast) << "\n";
   std::cout << "__________________________________________\n";
@@ -1438,5 +1439,4 @@ int main(){
   for(auto el: stack){
     cout << el << "\n";
   }
-  cout << "Hello world\n"; //abych si mohl dát breakpoint za interpret
 }
