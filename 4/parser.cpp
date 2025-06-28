@@ -1242,165 +1242,71 @@ void emit_for(std::vector<Instruction> &program,
 }
 
 int main(){
-  // "3-5+2" //"-1+1+2+1-2-3" var neco=3;neco=5;
-  // "var neco = 3" => BLOCK(VAR(neco), ASSIGN(neco, 3))
-  // "(a <= (b != c)) == d;" => BLOCK(EQ(LESS_EQ(a, NOT_EQ(b, c)), d))
-  // "var a = 1 + 2 * 9 / -3;var b = 0;" => BLOCK(ASSIGN(VAR(a), ADD(1, DIV(MUL(2, 9), UN_MIN(3)))), ASSIGN(VAR(b), 0))
-  // "var neco=-!0-1/6;" "var neco=0-12/6;"
-  // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
-  //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
-  std::string source = //"var a = 3;a=6;print a;";
-  "print -1 || -1;"
-  "print -1 || 0;"
-  "print 0 || -1;"
-  "print 0 || 0;"
-  "print (1 && (-2 || 0));"
+
+  std::string source =
+  "print -1 || -1;" //1
+  "print -1 || 0;" //1
+  "print 0 || -1;" //1
+  "print 0 || 0;" //0
+  "print (1 && (-2 || 0));" //1
   "print 20000;"
 
-  "print -1 && -1;"
-  "print -1 && 0;"
-  "print 0 && -1;"
-  "print 0 && 0;"
+  "print -1 && -1;" //1
+  "print -1 && 0;" //0
+  "print 0 && -1;" //0
+  "print 0 && 0;"  //0
   
-  "if(-!0) print 69;"
-  "print -!0 == -1;"
+  "print -!0 == -1;" //1
   "var a = 5;"
   "while(a){print a;a = a -1;}" //5 4 3 2 1
   "a = -5;"
   "while(a){print a;a = a +1;}" //-5 -4 -3 -2 -1
   //this for loop example makes me think I didn't need to change if(2) to if(2 != 0)
-  "for(a = 5; a; a = a-1){print a;}";
+  "for(a = 5; a; a = a-1){print a;}"
 
   
   // && test
-  // "var a;"
-  // "var b;"
-  // "var c = 6;"
-  // "if(!a && (!b && 2)) print 1;"
-  // "print -200;"
-  // "print 1 && 2;"
-  // "print -2 && 2;"
-  // "print -1 && 0;"
-  // "print 0 && -1;"
-  // "print 0 && 0;";
+  "var a;" //0
+  "var b;" //0
+  "if(!a && (!b && 2)) print 10;"
+  "print -200;"
+  "print 1 && 2;" //1
+  "print -2 && 2;" //1
+  "print -1 && 0;" //0
+  "print 0 && -1;" //0
+  "print 0 && 0;" //0
 
-  // "while ((a = a - 1) >= 0) print a;"
-  // "print 65535;"
+  "while ((a = a - 1) >= 0) print a;" //nevypíše nic
+  "print 65535;"
+  "for (var i = 10; i < 35; i = i + 1) {"
+    "var delitelne2 = i / 2 == (i + 1) / 2;"
+    "if (delitelne2) print i;"
+  "}"
 
-  //for loops don't leak the stack test
-  // "for (var i = 10; i < 35; i = i + 1) {"
-  //   "var delitelne2 = i / 2 == (i + 1) / 2;"
-  //   // "print delitelne2;"
-  //   "if (delitelne2) print i;"
-  //   // "else print i*i;"
-  //   // "print -69;"
-  //   // "for(var a = 0;a<5; a = a + 1)"
-  //   // "print i;print a;"
-  //   // "{print i;i = i + 1;print a*i;}" //if there is a block, the stack is empty, however if there is simply print i; as a statement (like so "for(var a = 0;a<5; a = a + 1) print i;"), it was not
-  // "}";
-  // "var neco=(!!!0 <= 1);"
+  "var vysledek = 1;"
+  "var faktorial = 12;"
+  "while(faktorial){"
+  "  vysledek = vysledek * faktorial;"
+  "  faktorial = faktorial - 1;"
+  "}"
+  "print vysledek;" //} nematchující s ničím by zastavilo další:
 
-  //nested conditions parsing example
-  // "var r = 1;"
-  // "var neco=((r = r*-1) <= r-1);"//-!0+25*3+3-5-1/6;"
-  // "print neco;"
-  // "r = 1;"
-  // "if((neco / 2) + 2 - neco) print -222;"
-  // "else print -99;"
-  // "if(6){print 2;print -2;if(neco == 6) print neco; if(neco == 7){print 0;}else{print -1;}while(neco > 3){print -2;print 25;if(neco){}else{print neco;}}}"
-  // "var neco=((r == (r = -r)) >= (r-1 < r));"//-!0+25*3+3-5-1/6;"
-  // "print neco;";
+    "var a = 0;"
+    "for(a = 0; a < 8; a = a + 1){"
+    "print a;}"
+    "if(a == 2){"
+    "print 10;"
+    "}else{"
+    "print 20;}"
 
-
-    //tohle je nested loop
-  //   "print 64;"
-  //   "var vysledek = 1;"
-  //   "var faktorial = 12;"
-  //   "while(faktorial){"
-  //   "  vysledek = vysledek * faktorial;"
-  //   "  faktorial = faktorial - 1;"
-  //   "}"
-  // "print vysledek;}";
-
-    // "var a = 0;"
-    // "for(a = 0; a < 8; a = a + 1){"
-    // "print a;}";
-    // "if(a == 2){"
-    // "print 10;"
-    // "}else{"
-    // "print 20;}"
-
-    // "a = 5;"
-    // "while(a >= 0){"
-    //   "print a;"
-    //   "if(a == 3){"
-    //     "print a * a;}"
-    //   "a = a - 1;}"
-    // "print 255;"
-    // "print a;";
-
-    // "var a;"
-    // "var b;"
-    // "if (a > b) {"
-    //   "while (b < a)"
-    //     "print b;"
-
-    //   "if (123)"
-    //     "if (321)"
-    //       "while (231)"
-    //         "print 213;"
-    // "}else{print 2;}";
-
-    // "var a = 1 + 2 * 9 / -3;"
-    // "print a;" //-5
-    // "var b = 0;"
-    // "print a;" //0
-    // "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
-    // "print (a = 0) >= a;" //1
-    // "print !(b > (b = 0));"; //1
-    //po tomhle referencčím programzú dokonce 7
-
-    //po tomhle na stacku ulozene zustavaji 2 osirele veci
-    // "var promenna = -99*-2;"
-    // "print promenna;";
-
-
-    // "c = 5;"
-    // "print c;";
-   
-  // "var a = 0;"
-  // "-(a = a + 1);"
-  // "print a;";
-  // "var a = -5;"
-  // "var b = a - 1;"
-  // // "(a = 10) == a;"
-  // // "print (a = 10) == a;"
-  // "print a == 3;"
-  // "print a != 3;"
-  // "print a > -8;"
-  // "print a > -5;"
-  // "print a > a;"
-  // "print a > 3;"
-  // "print a > b;"
-  // "print(a);"
-  // //pro grafy f1(x): y = x+3 a f2(x): y = 2(x+3) platí f1>f2 od (-inf, -3)
-  // "a = -2;" //2
-  // "print((a = a+3) > a*2);"
-  // //grafy f1(x): y = 2x a f2(x): y = x+3 platí f1<f2 pro od (-inf, +3)
-  // //sjednocení, kdy platí oobjí je -4 a míň
-  // //naopak kdy se výsledky liší je (-3, 3)
-  // // v (-inf, -3) platí obojí a v (3, inf) neplatí nic
-  // //takže -2 -1 0 1 2
-  // "a = -2;" //2
-  // "print((a*2) < (a = a+3));";
-  // "print a == 3;";
-  // "var a = 1 + 2 * 9 / -3;" //;print a;;"; //"-!0+25*3+3-5+-1/6" //"var zcelaSkvelyNazev123a = 369+21;\nif( !neco == 3){\nfunkce()\n}\nif skvelaPromenna2  + neco == 3:"; //"\ntest ifelse if var ~  invalid_variableName_ = 369+2-1\nskvelaPromenna2 neco|| == 3" //"var a  =  33+2;" //"var skvelaPromenna2 = 369+2-1\nskvelaPromenna2 neco|| == 3"
-  // "print a;"
-  // "var b = 0;"
-  // //prostě dát tu kontrolu středníku jinam
-  // "print ((a = 10) * (b = 4)) / a / b;" //tahle řádka ukazuje, že není dobrý chtít za každým expressionem ; => Error on token RPAREN() at 0:55: Expected ';' after expression. Parsed so far: => ASSIGN( LIT(a), LIT(10) )
-  // "print (a = 0) >= a;"
-  // "print !(b > (b = 0));";
+    "var a = 1 + 2 * 9 / -3;"
+    "print a;" //-5
+    "var b = 0;"
+    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
+    "print (a = 0) >= a;" //1
+    "print !(b > (b = 0));" //0 (!(4>0))
+    "var neco=-!0+25*3+3-5-1/6;"
+    "print neco;"; //72
 
   std::vector<Token> ts = lex(source);
 
