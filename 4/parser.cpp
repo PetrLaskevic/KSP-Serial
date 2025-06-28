@@ -140,11 +140,14 @@ Expr assignment(TokenScanner &ts);
 Expr if_statement(TokenScanner &ts) {
   ts.consume(TK_LPAREN, "expected '(' after 'if'");
   //tady pocitam klasicke if(boolean) nebo if(expression)
-  //obojí by měl vyřešit expression, if(a) asi vyřeším na > 0 
+  //obojí by měl vyřešit expression, if(a) asi vyřeším na != 0 
+  //(pozor, nikoli > 0 pro kompatibilitu s realnými jazyky if(-2) print 3; to má vyprintit)
+  //=> pro sjednocené vnímání truthfullness jsem to též udělal v && => -2 && -2 je true
+  //kdyby byla záporná čísla false, tak je to divné, false and false == true
   Expr ifCond = expression(ts);
-  //pokud je výraz, tak ho nechám, pokud není př if(a), tak ho převedu na if(a>0)
+  //pokud je výraz, tak ho nechám, pokud není př if(a), tak ho převedu na if(a!=0)
   if(!isEqualityExpr(ifCond.type)){
-    ifCond = Expr(ET_GREATER, {ifCond, Expr(ET_LITERAL, "0")});
+    ifCond = Expr(ET_NOT_EQUAL, {ifCond, Expr(ET_LITERAL, "0")});
   }
   ts.consume(TK_RPAREN,
             "expected ')' after an "
@@ -170,11 +173,11 @@ Expr if_statement(TokenScanner &ts) {
 Expr while_statement(TokenScanner &ts){
   ts.consume(TK_LPAREN, "expected '(' after 'while'");
   //tady pocitam klasicke while(boolean) nebo while(expression)
-  //obojí by měl vyřešit expression, while(a) asi vyřeším na a > 0 
+  //obojí by měl vyřešit expression, while(a) vyřeším na a != 0 
   Expr condition = expression(ts);
-  //pokud je výraz, tak ho nechám, pokud není př while(a), tak ho převedu na while(a>0)
+  //pokud je výraz, tak ho nechám, pokud není př while(a), tak ho převedu na while(a!=0)
   if(!isEqualityExpr(condition.type)){
-    condition = Expr(ET_GREATER, {condition, Expr(ET_LITERAL, "0")});
+    condition = Expr(ET_NOT_EQUAL, {condition, Expr(ET_LITERAL, "0")});
   }
   ts.consume(TK_RPAREN,
             "expected ')' after an "
@@ -1204,16 +1207,28 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
-  "var a;"
-  "var b;"
-  "var c = 6;"
-  "if(!a && !b && 2) print 1;"
-  "print -200;"
-  "print 1 && 2;"
-  "print -2 && 2;"
-  "print -1 && 0;"
-  "print 0 && -1;"
-  "print 0 && 0;";
+  "if(-!0) print 69;"
+  "print -!0 == -1;"
+  "var a = 5;"
+  "while(a){print a;a = a -1;}" //5 4 3 2 1
+  "a = -5;"
+  "while(a){print a;a = a +1;}" //-5 -4 -3 -2 -1
+  //this for loop example makes me think I didn't need to change if(2) to if(2 != 0)
+  "for(a = 5; a; a = a-1){print a;}";
+
+  
+  // && test
+  // "var a;"
+  // "var b;"
+  // "var c = 6;"
+  // "if(!a && (!b && 2)) print 1;"
+  // "print -200;"
+  // "print 1 && 2;"
+  // "print -2 && 2;"
+  // "print -1 && 0;"
+  // "print 0 && -1;"
+  // "print 0 && 0;";
+
   // "while ((a = a - 1) >= 0) print a;"
   // "print 65535;"
 
