@@ -961,7 +961,6 @@ void emit(std::vector<Instruction> &program,
         .op = OP_PUSH,
         .value = 1
       });
-
       int completelyTestedJumpToEndAddr = size(program);
       program.push_back(Instruction{
         .op = OP_BRANCH,
@@ -982,7 +981,72 @@ void emit(std::vector<Instruction> &program,
         .op = OP_NOP
       });
 
-    }
+    } break;
+    case ET_OR: {
+      //shorcircuit, pokud je 1. true, tak zbytek netřeba
+      Expr leftSide = expr.children[0];
+      Expr rightSide = expr.children[1];
+
+      emit(program, leftSide);
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 0
+      });
+      program.push_back(Instruction{
+        .op = OP_EQ
+      });
+      program.push_back(Instruction{
+        .op = OP_NOT
+      });
+      int branchAddr = size(program);
+      program.push_back(Instruction{
+        .op = OP_BRANCH
+      }); //value konce zapíšeme později
+
+      //pokud jsme došli sem, tak kontrolujeme druhou podmínku
+      //(první nebyla 1, tak jestli tahle jo)
+      emit(program, rightSide);
+      //takže tahle potřebuje být taky truthy tedy != 0
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 0
+      });
+
+      //dá tu 1 nebo 0 na zásobník, 
+      //(případy (0 || 1) a (0 || 0))
+      program.push_back(Instruction{
+        .op = OP_EQ
+      });
+      program.push_back(Instruction{
+        .op = OP_NOT
+      });
+
+      //odsud ale musíme unconditionally skočit na konec na NOP
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 1
+      });
+      int completelyTestedJumpToEndAddr = size(program);
+      program.push_back(Instruction{
+        .op = OP_BRANCH,
+        .value = completelyTestedJumpToEndAddr + 2
+      });
+
+      //end = shortcircuit z 1. podmínky, manuálně returnujeme 1
+      //(tam jsme měli jen OP_EQ a OP_BRANCH, který přeskočil check druhé podmínky)
+      auto endRet0Addr = size(program);
+      program.push_back(Instruction{
+        .op = OP_PUSH,
+        .value = 1
+      });
+      //zápis do OP_BRANCH abychom se sem tím short circuitem tam dostali
+      program[branchAddr].value = (int)endRet0Addr;
+
+      program.push_back(Instruction{
+        .op = OP_NOP
+      });
+
+    } break;
   } 
 }
 
@@ -1207,6 +1271,18 @@ int main(){
   // "10-12+6" => BLOCK( ADD( SUBST( 10, 12), 6))
   //a = -!0+25*3+3-5+-1/6;a = a -1;c=10-12+6;
   std::string source = //"var a = 3;a=6;print a;";
+  "print -1 || -1;"
+  "print -1 || 0;"
+  "print 0 || -1;"
+  "print 0 || 0;"
+  "print (1 && (-2 || 0));"
+  "print 20000;"
+
+  "print -1 && -1;"
+  "print -1 && 0;"
+  "print 0 && -1;"
+  "print 0 && 0;"
+  
   "if(-!0) print 69;"
   "print -!0 == -1;"
   "var a = 5;"
