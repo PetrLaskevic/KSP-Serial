@@ -638,7 +638,7 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_OR
     ){
       for (auto& operand : expr.children) {
-        std::cout << "operand: " << allOPToString(operand).text << "\n"; 
+        // std::cout << "operand: " << allOPToString(operand).text << "\n"; 
         emit(program, operand);
       }
     }
@@ -682,12 +682,11 @@ void emit(std::vector<Instruction> &program,
       // Tady konečně naparsujeme číslo ze stringu
       // :)
       int value = std::stoi(expr.value);
-      std::cout << "LITERALLLLLL " << value << "\n";
+      // std::cout << "LITERALLLLLL " << value << "\n"; //pomáhalo odhalovat bugy z omylem opakovaného průchodu podstromu
       program.push_back(Instruction{
           .op = OP_PUSH, .value = value});
     } break;
     case ET_NAME: {
-      std::cout << "NAME\n";
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
       //a pak její hodnotu dosadí na zásobník
@@ -713,7 +712,6 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_PUSH, .value=0});
     } break;
     case ET_ASSIGN: {
-      std::cout << "ASSIGN\n";
       //tady je ten moment, kdy zamítneme levou stranu cokoliv než proměnnou (for now)
       Expr leftSide = expr.children[0];
       if(
@@ -1060,28 +1058,9 @@ void emit_block(std::vector<Instruction> &program,
   //   program.push_back(
   //       Instruction{.op = OP_PUSH, .value = 0});
   // } else {
-    //pro for loop tohle vypise jeden block, ten for loop body
-    std::cout << "statements number " << statements.size() << "\n";
     for (size_t i = 0; i < size(statements); i++) {
-      //referenční verze mi na programu:
-      // "var a = 5;"
-      // "print a;"
-      // "while ((a = a - 1) >= 0) {"
-      //   "print a;"
-      // "}"
-      //nechala 7 věcí
-      // if (i > 0) {
-      //   program.push_back(
-      //       Instruction{.op = OP_POP, .value = 0});
-      // }
-      // emit(program, statements[i]);
-      //vs tahle moje nechala 1 věc
       //(logicky mi to dává smysl - vyrobit instrukce 
       //pro AST node pro celý expressiony ("řádky") => pak uklidit)
-      //(přičemž z nějakého důvodu je jedno, jestli v block() nechám:
-      //  //i block statement nově bude vracet
-      // statements.push_back(Expr(ET_LITERAL, "0"));)
-      //nebo ne
       emit(program, statements[i]);
       program.push_back(Instruction{.op = OP_POP, .value = 0});
     // }
