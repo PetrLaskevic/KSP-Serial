@@ -139,16 +139,19 @@ Expr assignment(TokenScanner &ts);
 
 Expr if_statement(TokenScanner &ts) {
   ts.consume(TK_LPAREN, "expected '(' after 'if'");
+  //tahle konverze není třeba = Literal je furt truthy
+  //(OP_BRANCH branchuje vždy pokud je != 0) = splněna podmínka
   //tady pocitam klasicke if(boolean) nebo if(expression)
   //obojí by měl vyřešit expression, if(a) asi vyřeším na != 0 
   //(pozor, nikoli > 0 pro kompatibilitu s realnými jazyky if(-2) print 3; to má vyprintit)
   //=> pro sjednocené vnímání truthfullness jsem to též udělal v && => -2 && -2 je true
   //kdyby byla záporná čísla false, tak je to divné, false and false == true
   Expr ifCond = expression(ts);
+  //tahle konverze není třeba = Literal je furt truthy
   //pokud je výraz, tak ho nechám, pokud není př if(a), tak ho převedu na if(a!=0)
-  if(!isEqualityExpr(ifCond.type)){
-    ifCond = Expr(ET_NOT_EQUAL, {ifCond, Expr(ET_LITERAL, "0")});
-  }
+  // if(!isEqualityExpr(ifCond.type)){
+  //   ifCond = Expr(ET_NOT_EQUAL, {ifCond, Expr(ET_LITERAL, "0")});
+  // }
   ts.consume(TK_RPAREN,
             "expected ')' after an "
             "expression inside an if statement");
@@ -175,10 +178,12 @@ Expr while_statement(TokenScanner &ts){
   //tady pocitam klasicke while(boolean) nebo while(expression)
   //obojí by měl vyřešit expression, while(a) vyřeším na a != 0 
   Expr condition = expression(ts);
-  //pokud je výraz, tak ho nechám, pokud není př while(a), tak ho převedu na while(a!=0)
-  if(!isEqualityExpr(condition.type)){
-    condition = Expr(ET_NOT_EQUAL, {condition, Expr(ET_LITERAL, "0")});
-  }
+  //tahle konverze není třeba = Literal je furt truthy
+  //(OP_BRANCH branchuje vždy pokud je != 0) = splněna podmínka
+  // //pokud je výraz, tak ho nechám, pokud není př while(a), tak ho převedu na while(a!=0)
+  // if(!isEqualityExpr(condition.type)){
+  //   condition = Expr(ET_NOT_EQUAL, {condition, Expr(ET_LITERAL, "0")});
+  // }
   ts.consume(TK_RPAREN,
             "expected ')' after an "
             "expression inside a while statement");
@@ -1261,14 +1266,16 @@ int main(){
   "while(a){print a;a = a -1;}" //5 4 3 2 1
   "a = -5;"
   "while(a){print a;a = a +1;}" //-5 -4 -3 -2 -1
+  
   //this for loop example makes me think I didn't need to change if(2) to if(2 != 0)
+  //=> indeed
   "for(a = 5; a; a = a-1){print a;}"
 
   
   // && test
   "var a;" //0
   "var b;" //0
-  "if(!a && (!b && 2)) print 10;"
+  "if(a && (!b && 2)) print 10;" //doesnt print
   "print -200;"
   "print 1 && 2;" //1
   "print -2 && 2;" //1
