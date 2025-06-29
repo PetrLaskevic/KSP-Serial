@@ -1246,74 +1246,20 @@ void emit_for(std::vector<Instruction> &program,
   program[endJumpInstructionAdress].value = endIP;
 }
 
+#include <fstream>
+//load a text file in a string
+std::string slurp(std::ifstream& in) {
+    std::ostringstream sstr;
+    sstr << in.rdbuf();
+    return sstr.str();
+}
+
 int main(){
 
-  std::string source =
-  "print -1 || -1;" //1
-  "print -1 || 0;" //1
-  "print 0 || -1;" //1
-  "print 0 || 0;" //0
-  "print (1 && (-2 || 0));" //1
-  "print 20000;"
+  std::ifstream file("zdrojak.txt");
+  std::string source = slurp(file);
 
-  "print -1 && -1;" //1
-  "print -1 && 0;" //0
-  "print 0 && -1;" //0
-  "print 0 && 0;"  //0
-  
-  "print -!0 == -1;" //1
-  "var a = 5;"
-  "while(a){print a;a = a -1;}" //5 4 3 2 1
-  "a = -5;"
-  "while(a){print a;a = a +1;}" //-5 -4 -3 -2 -1
-  
-  //this for loop example makes me think I didn't need to change if(2) to if(2 != 0)
-  //=> indeed
-  "for(a = 5; a; a = a-1){print a;}"
-
-  
-  // && test
-  "var a;" //0
-  "var b;" //0
-  "if(a && (!b && 2)) print 10;" //doesnt print
-  "print -200;"
-  "print 1 && 2;" //1
-  "print -2 && 2;" //1
-  "print -1 && 0;" //0
-  "print 0 && -1;" //0
-  "print 0 && 0;" //0
-
-  "while ((a = a - 1) >= 0) print a;" //nevypíše nic
-  "print 65535;"
-  "for (var i = 10; i < 35; i = i + 1) {"
-    "var delitelne2 = i / 2 == (i + 1) / 2;"
-    "if (delitelne2) print i;"
-  "}"
-
-  "var vysledek = 1;"
-  "var faktorial = 12;"
-  "while(faktorial){"
-  "  vysledek = vysledek * faktorial;"
-  "  faktorial = faktorial - 1;"
-  "}"
-  "print vysledek;" //} nematchující s ničím by zastavilo další:
-
-    "var a = 0;"
-    "for(a = 0; a < 8; a = a + 1){"
-    "print a;}"
-    "if(a == 2){"
-    "print 10;"
-    "}else{"
-    "print 20;}"
-
-    "var a = 1 + 2 * 9 / -3;"
-    "print a;" //-5
-    "var b = 0;"
-    "print ((a = 10) * (b = 4)) / a / b;" //40/10/4 == 1
-    "print (a = 0) >= a;" //1
-    "print !(b > (b = 0));" //0 (!(4>0))
-    "var neco=-!0+25*3+3-5-1/6;"
-    "print neco;"; //72
+  std::cout << "PUVODNI ZDROJAK:\n\n" << source << "\n";
 
   std::vector<Token> ts = lex(source);
 
@@ -1333,7 +1279,7 @@ int main(){
   TokenScanner tokenScanner = TokenScanner(ts);
 
   auto ast = block(tokenScanner);
-  std::cout << "PUVODNI ZDROJAK STRIPPED OF WHITESPACE:\n" << source << "\n";
+  
   std::cout << "__________________________________________\n";
   std::cout << "Vytisknuty AST:\n";
   std::cout << "\n" << prefixPrint(ast) << "\n";
