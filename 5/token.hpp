@@ -87,6 +87,9 @@ std::string token_type_to_str(TokenType t) {
     case  TK_WHILE: return "WHILE";
     case  TK_NAME: return "NAME";
     case  TK_NUMBER: return "NUMBER";
+    case TK_FN: return "FN";
+    case TK_COMMA: return "COMMA";
+    case TK_RETURN: return "RETURN";
   }
   return "<invalid token value>";
 }
