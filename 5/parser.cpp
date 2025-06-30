@@ -364,7 +364,7 @@ Expr block(TokenScanner &ts) {
   return Expr(ET_BLOCK, statements);
 }
 
-Expr arg_list(std::string fn_name, TokenScanner ts){
+Expr arg_list(std::string fn_name, TokenScanner &ts){
   std::vector<Expr> argumentList;
   while(!ts.check(TK_RPAREN)){
     if(ts.match(TK_FN)) ts.error("Nepodporujeme definici funkce jako parametr funkce");
