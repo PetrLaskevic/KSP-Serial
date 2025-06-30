@@ -1,5 +1,4 @@
-
-
+#include <map>
 #include "token.hpp"
 #include "stack.hpp"
 #include <cctype>
@@ -103,6 +102,11 @@ enum ExprType {
   ET_IF,
   ET_WHILE,
   ET_FOR,
+  ET_ARG_LIST,
+  ET_FN,
+  ET_RETURN,
+  ET_FUNCTION_LIST,
+  ET_CALL
 };
 
 //vrchol AST
@@ -136,6 +140,63 @@ Expr statement(TokenScanner &ts);
 bool isEqualityExpr(ExprType t);
 Expr block(TokenScanner &ts);
 Expr assignment(TokenScanner &ts);
+
+//mělo by mít stejnou funkčnost jako `function` ze šablony
+//(šablony na to jsem si všíiml později)
+Expr fn_definition(TokenScanner &ts){
+  cout << "i" << token_type_to_str(ts.peek().type) << "\n";
+  ts.consume(TK_FN,
+      "expected fn keyword to start a function");
+  //za fn očekáváme jméno
+  if(!ts.check(TK_NAME)){
+    ts.error("Expected name after 'fn'. Instead got:" + token_type_to_str(ts.peek().type));
+  }
+  //pro ET_NAME s názvem funkce (kdyby nám stačil token s názvem, tak prostě ts.peek())
+  // Expr functionName = primary(ts);
+  //primary by nám zase začalo po ( volat expression 
+  //=> museli bychom narvat parsování parametrů někam jinam
+  //proto:
+  Expr name = Expr(ET_NAME, ts.peek().value); 
+  std::cout << "function name is " << prefixPrint(name) << "\n";
+  ts.advance();
+  ts.consume(TK_LPAREN, "expected '(' after function name");
+  //a teď argument list
+  std::vector<Expr> argumentList;
+  while(ts.check(TK_NAME)){
+    argumentList.push_back(
+      Expr(ET_NAME, ts.peek().value)
+    );
+    ts.advance();
+    //I want to support both fn a(b,c,) and fn(b,c)
+    //so I don't put ts.consume(TK_COMMA, "");
+    //can be a single parameter function
+    if(!ts.match(TK_COMMA)){
+      //but if there is a name not separated by comma, that's an error
+      if(ts.match(TK_NAME)){
+        ts.error("Argumenty funkcí musí být odděleny čárkou! Funkce " + name.value + "\n");
+      }
+    }else{
+      if(ts.match(TK_COMMA)){
+        ts.error("Mezi dvojící čárek musí být argument! Funkce " + name.value + "\n");
+      }
+    }
+  }
+  ts.consume(TK_RPAREN, "Expected ')' after function argument list");
+  Expr argumentNode = Expr(ET_ARG_LIST, argumentList);
+  std::cout << "function arguments are " << prefixPrint(argumentNode) << "\n";
+  //function body
+  //tady na rozdíl od if,for, while nepodporuju jeden výraz
+  //asi by to šlo, ale př. JS to tak nedělá => ani autoři ne, nice
+  
+  ts.consume(TK_LBRACE,
+     "expected '\{' to start function body");
+  std::cout << "before body\n";
+  Expr body = block(ts);
+
+  std::cout << "body is " << prefixPrint(body) << "\n";
+
+  return Expr(ET_FN, {name, argumentNode, body});
+}
 
 Expr if_statement(TokenScanner &ts) {
   ts.consume(TK_LPAREN, "expected '(' after 'if'");
@@ -252,17 +313,28 @@ Expr for_statement(TokenScanner &ts) {
   return Expr(ET_FOR, {init, cond, expr, body});
 }
 
+Expr return_statement(TokenScanner &ts){
+  Expr what = statement(ts);
+  return Expr(ET_RETURN, {what});
+}
+
 Expr statement(TokenScanner &ts) {
   if (ts.match(TK_PRINT)) return printStatement(ts);
   // if (ts.match(TK_VAR)) return var_statement(ts); //mám v rámci assignment v expression, snad v pohodě
   if (ts.match(TK_FOR)) return for_statement(ts);
   if (ts.match(TK_IF)) return if_statement(ts);
   if (ts.match(TK_WHILE)) return while_statement(ts);
+  cout << token_type_to_str(ts.peek().type) << "\n";
+  cout << "lol" << token_type_to_str(ts.source[0].type) << " " << token_type_to_str(ts.source[0].type);
+  if(ts.check(TK_FN)) return fn_definition(ts); //ts.check protože se volá i z parse nepodmínečně na všechny tokeny => zkouší parsovat funkci do }, pak znova, dokud nedojdou tokeny
+  if(ts.match(TK_RETURN)) return return_statement(ts);
 
   //pokud { tak nový block
   if (ts.match(TK_LBRACE)) return block(ts);
   
+  cout << "pred " << ts.source.size() << "\n";
   Expr a = expression(ts);
+  cout << "po " << ts.source.size() << "\n";
   //semicolon check na jednom miste, at uz je to call do expression nebo print statement
   if(!ts.match(TK_SEMICOLON)){
     ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
@@ -270,7 +342,15 @@ Expr statement(TokenScanner &ts) {
   return a;
 }
 
-//předtím název parse, teď block
+//nově je veškerý kód v nějaké funkci, nepodporujeme JS style top level kód
+Expr parse(TokenScanner &ts) {
+  std::vector<Expr> functions;
+    while (!ts.isAtEnd()) {
+      functions.push_back(fn_definition(ts));
+    }
+    return Expr(ET_FUNCTION_LIST, functions);
+}
+
 Expr block(TokenScanner &ts) {
   std::vector<Expr> statements;
 
@@ -282,6 +362,26 @@ Expr block(TokenScanner &ts) {
   // statements.push_back(Expr(ET_LITERAL, "0"));
   // => radši se o to postará nově emit_block
   return Expr(ET_BLOCK, statements);
+}
+
+Expr arg_list(std::string fn_name, TokenScanner ts){
+  std::vector<Expr> argumentList;
+  while(!ts.check(TK_RPAREN)){
+    if(ts.match(TK_FN)) ts.error("Nepodporujeme definici funkce jako parametr funkce");
+    if(ts.match(TK_RETURN)) ts.error("Return nemá co dělat jako parametr funkce");
+    //trochu jsem musel tweaknout expression, ať nehodí výjimku až by se s ',' probublal do výjimky
+    //na zpracovani literalu se nekdy behem zpracovani expressionu callne ts.advance()
+    argumentList.push_back(expression(ts));
+    if(ts.check(TK_COMMA)){
+      ts.advance();
+      if(ts.match(TK_COMMA)){
+         ts.error("Argumenty function callu musí být odděleny čárkou! Call " + fn_name);
+      }
+    }
+  }
+  ts.consume(TK_RPAREN, "Expected ')' after call argument list");
+  cout << "behem (po arg_list) " << ts.source.size() << "\n";
+  return Expr(ET_ARG_LIST, argumentList);
 }
 
 Expr primary(TokenScanner &ts) {
@@ -303,6 +403,11 @@ Expr primary(TokenScanner &ts) {
   }
   //list našeho stromu, použítí proměnné někde místo čísla ("dosazení")
   if (ts.match(TK_NAME)) {
+    auto name = token.value;
+    //name( je function call
+    if(ts.match(TK_LPAREN)){
+      return arg_list(name, ts);
+    }
     return Expr(ET_NAME, token.value);
   }
 
@@ -313,7 +418,11 @@ Expr primary(TokenScanner &ts) {
     return e;
   }
 
-  ts.error("Unexpected token");
+  //trochu hack, aby netrippovalo, když uvidí nekde , (kdyz se z arg_list provola sem)
+  if(!ts.match(TK_COMMA)){
+    ts.error("Unexpected token");
+  }
+
   return Expr(ET_LITERAL, "0"); // unreachable, error() končí program že jo, abych se vyhnul "Warning: control reaches end of non-void function"
 }
 
@@ -506,8 +615,12 @@ printColorETpair allOPToString(Expr& node){
     case ET_IF: return {"\033[38;5;202m", "IF"};
     case ET_WHILE: return {"\033[38;5;202m", "WHILE"};
     case ET_FOR: return {"\033[38;5;202m", "FOR"};
-    case ET_AND: return{"\033[38;5;15m\033[48;5;27m", "AND"};
-    case ET_OR: return{"\033[38;5;221m", "OR"};
+    case ET_AND: return {"\033[38;5;15m\033[48;5;27m", "AND"};
+    case ET_OR: return {"\033[38;5;221m", "OR"};
+    case ET_FN: return {defaultColor, "FN"};
+    case ET_ARG_LIST: return {defaultColor, "ARGS"};
+    case ET_RETURN: return {defaultColor, "RET"};
+    case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
     //nic není pravda
     default: return {defaultColor, ""};
   }
@@ -557,7 +670,7 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
       "\n" + ident + color + "}" + noColor;
     }
   }else{
-    if(node.type == ET_BLOCK){
+    if(node.type == ET_BLOCK || node.type == ET_FUNCTION_LIST){
       whiteSpaceUsed = ident; //existing ident plus one level more
       op += "\n";
       separator = ";\n";
@@ -609,6 +722,11 @@ void emit_for(std::vector<Instruction> &program,
 void emit_block(std::vector<Instruction> &program,
                 std::vector<Expr> &statements);
 
+void emit_call(
+ std::vector<Instruction> &program,
+ Expr const &expr
+);
+
 void emit(std::vector<Instruction> &program,
           Expr &expr) {
 
@@ -640,7 +758,8 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_FOR &&
       expr.type != ET_BLOCK &&
       expr.type != ET_AND &&
-      expr.type != ET_OR
+      expr.type != ET_OR &&
+      expr.type != ET_FN
     ){
       for (auto& operand : expr.children) {
         // std::cout << "operand: " << allOPToString(operand).text << "\n"; 
@@ -1050,7 +1169,65 @@ void emit(std::vector<Instruction> &program,
       });
 
     } break;
+    case ET_CALL: {
+      emit_call(program, expr);
+    } break;
   } 
+}
+//from stack.hpp:
+// struct Function {
+//   std::vector<std::string> args;
+//   std::vector<Instruction> code;
+// };
+//emits code for functions in a different ast then the rest
+std::map<std::string, Function> emit_program(Expr &expr) {
+  auto program = std::map<std::string, Function>{};
+  assert(expr.type == ET_FUNCTION_LIST);
+
+  for (auto function : expr.children) {
+    assert(function.type == ET_FN);
+    auto function_name = function.children.at(0);
+    auto function_arguments = function.children.at(1);
+    auto function_body = function.children.at(2);
+
+    assert(function_name.type == ET_NAME);
+    assert(function_arguments.type == ET_ARG_LIST);
+    assert(function_body.type == ET_BLOCK);
+
+    auto function_instructions = std::vector<Instruction>();
+    emit(function_instructions, function_body);
+
+    std::vector<std::string> args;
+    for (auto const &arg_expr : function_arguments.children) {
+      args.push_back(arg_expr.value);
+    }
+
+    program[function_name.value] =
+        Function{.args = args, .code = function_instructions};
+  }
+
+  return program;
+}
+
+void emit_call(
+ std::vector<Instruction> &program,
+ Expr const &expr
+) {
+  assert(expr.type == ET_CALL);
+
+  auto name = expr.children.at(0);
+  auto args = expr.children.at(1);
+
+  assert(name.type == ET_NAME);
+  assert(args.type == ET_ARG_LIST);
+
+  for (auto &arg : args.children) { 
+    emit(program, arg);
+  }
+
+  program.push_back(
+    Instruction{.op = OP_CALL, .value = name.value}
+  );
 }
 
 void emit_block(std::vector<Instruction> &program,
@@ -1278,7 +1455,7 @@ int main(){
 
   TokenScanner tokenScanner = TokenScanner(ts);
 
-  auto ast = block(tokenScanner);
+  auto ast = parse(tokenScanner);
   
   std::cout << "__________________________________________\n";
   std::cout << "Vytisknuty AST:\n";
@@ -1287,13 +1464,19 @@ int main(){
   std::cout << "\nProgram output:\n\n";
 
   //seznam instrukcí, co lze vykonat
-  std::vector<Instruction> program = {};
-  emit(program, ast);
+  // std::vector<Instruction> program = {};
+  //nově kvůli podpoře funkcí místo emit emit_program
+  //každá funkce bude mít svůj seznam instrukcí
+  //- už nevrací jednu prostou sekvenci instrukcí,
+  //ale seznam funkcí, z nichž každá má svůj seznam instrukcí
+  //interpret proto bude volán na každou funkci zvlášť znovu a znovu podle potřeby
+  //data stack pro instrukce je však ponechán společný
+  auto program = emit_program(ast);
   //stack, na kterém to actually poběží
   std::vector<int> stack = {};
   //proměnné, které to bude mít k dispozici, žijí zde
   std::unordered_map<std::string, int> vars;
-  interpret(program, stack, vars);
+  // interpret(program,"main");
   cout << "Stack length: " << stack.size() << "\n";
   for(auto el: stack){
     cout << el << "\n";

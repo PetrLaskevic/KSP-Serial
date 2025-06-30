@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <variant>
 #include <vector>
+#include <map>
 
 /*
 Zadani zde: https://ksp.mff.cuni.cz/h/ulohy/37/zadani1.html#task-37-1-S
@@ -46,7 +47,9 @@ enum Opcode {
   OP_NOT,
   OP_EQ,
   OP_LT,
-  OP_NOP
+  OP_NOP,
+  OP_CALL,
+  OP_RET,
 };
 
 struct Instruction {
@@ -70,15 +73,20 @@ vector<int> stack;
 unordered_map<string, int> promenne;
 int ip;
 
+struct Function {
+  std::vector<std::string> args;
+  std::vector<Instruction> code;
+};
 
-
-
-using namespace std;
-
-void interpret(
-    vector<Instruction> const &instrukce,
+//nově kvůli podpoře funkcí bude rekurzivní
+int interpret(
+    std::map<std::string, Function> const &program,
+    std::string name,
     vector<int> &zasobnik,
-    unordered_map<string, int> &promenne) {
+    unordered_map<std::string, int> &promenne) {
+
+  Function functionToRun = program.at(name);
+  vector<Instruction> instrukce = functionToRun.code;
   int ip = 0; // index aktuální instrukce
               // (instruction pointer)
   while (true) {
@@ -102,7 +110,7 @@ void interpret(
       if(!promenne.contains(get<string>(ins.value))){
         cerr << "ERROR: Proměnná '" << get<string>(ins.value) << "' nebyla deklarována! (pro deklaraci `var a;` (výchozí hodnota je 0))\n";
         //kdybych tady nereturnoval tak operátor [] ji v unordered_map vytvoří s hodnotou 0
-        return;
+        std::exit(1);
       }
       zasobnik.push_back(
           promenne[get<string>(ins.value)]);
@@ -114,7 +122,7 @@ void interpret(
       //=popuje do promenne specifikovane v .value hodnotu z zasobniku (=pop zasobniku)
       if(zasobnik.size() == 0){
         std::cerr << "Na zásobníku není žádná hodnota, OP_STORE do proměnné nelze provést!\n";
-        return;
+        std::exit(1);
       }
       promenne[get<string>(ins.value)] = zasobnik.back();
       zasobnik.pop_back();
@@ -191,7 +199,7 @@ void interpret(
       zasobnik.pop_back();
       if(second == 0){
         cout << "Pozor, deleni 0\n";
-        return;
+        std::exit(1);
       }
       zasobnik.push_back(first / second);
 
@@ -272,6 +280,11 @@ void interpret(
       int second = zasobnik.back();
       zasobnik.pop_back();
       zasobnik.push_back(second < first);
+    } break;
+
+    case OP_RET: {
+      assert(!empty(zasobnik));
+      return zasobnik.back();
     } break;
 
     }

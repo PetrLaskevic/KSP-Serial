@@ -1,8 +1,14 @@
-fn main(a,b){
+fn main(){
+    sum(6,5);
+}
+
+fn sum(a,b){
     return a + b;
 }
 
-for(var i = 10; i < 35; i = i + 1) {
-var delitelne2 = i / 2 == (i + 1) / 2;
-if (delitelne2) print i;
+fn sudaCisla(od, do){
+    for(var i = 10; i < 35; i = i + 1) {
+        var delitelne2 = i / 2 == (i + 1) / 2;
+        if (delitelne2) print i;
+    }
 }
