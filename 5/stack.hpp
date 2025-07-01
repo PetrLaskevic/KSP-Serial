@@ -305,20 +305,18 @@ int interpret(
         nove_promenne[arg] = zasobnik.back();
         zasobnik.pop_back();
       }
-      cout << "Alles klar?\n";
       std::vector<Instruction> code = call.code;
       //chceme aby nějak fungovaly věci typu var a = b(c);
       //=> to budou, stačí zavolat interpret(),
       //který na zásobníku svrchu nechá výslednou hodnotu
       interpret(program, callName, zasobnik, nove_promenne);
-      cout << "Je pravda? " << (zasobnik.size() > 0) << "\n";
+      cout << "Velikost zasobniku: " << zasobnik.size() << "\n";
       //nechceme ale sem dávat return interpret() nebo tak,
       //protože bychom skončili, a další instrukce ve funkci po function callu by se už nevykonaly  
       // int callReturnValue = zasobnik.back();
       // zasobnik.pop_back();
       // return callReturnValue;
-
-    }
+    } break;
 
     }
     ip += 1;

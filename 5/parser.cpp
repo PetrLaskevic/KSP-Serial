@@ -324,8 +324,8 @@ Expr statement(TokenScanner &ts) {
   if (ts.match(TK_FOR)) return for_statement(ts);
   if (ts.match(TK_IF)) return if_statement(ts);
   if (ts.match(TK_WHILE)) return while_statement(ts);
-  cout << token_type_to_str(ts.peek().type) << "\n";
-  cout << "lol" << token_type_to_str(ts.source[0].type) << " " << token_type_to_str(ts.source[0].type);
+  // cout << token_type_to_str(ts.peek().type) << "\n";
+  // cout << "lol" << token_type_to_str(ts.source[0].type) << " " << token_type_to_str(ts.source[0].type);
   if(ts.check(TK_FN)) return fn_definition(ts); //ts.check protože se volá i z parse nepodmínečně na všechny tokeny => zkouší parsovat funkci do }, pak znova, dokud nedojdou tokeny
   if(ts.match(TK_RETURN)) return return_statement(ts);
 
@@ -609,7 +609,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_ASSIGN: return {"\033[38;5;76m", "ASSIGN"};
     case ET_NEGATE: return {defaultColor, "UN_MIN"}; //unary minus
     case ET_NOT: return {defaultColor, "NOT"};
-    case ET_BLOCK: return {defaultColor, "BLOCK"};
+    case ET_BLOCK: return {"\033[38;5;15m\033[48;5;205m", "BLOCK"};
     case ET_PRINT: return {defaultColor, "PRINT"};
     case ET_VAR: return {defaultColor, "VAR_DECL"};
     case ET_LITERAL: return {defaultColor, "LITERAL"}; 
@@ -619,7 +619,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_FOR: return {"\033[38;5;202m", "FOR"};
     case ET_AND: return {"\033[38;5;15m\033[48;5;27m", "AND"};
     case ET_OR: return {"\033[38;5;221m", "OR"};
-    case ET_FN: return {defaultColor, "FN"};
+    case ET_FN: return {"\033[38;5;15m\033[48;5;38m", "FN"}; //"\033[38;5;38m"
     case ET_ARG_LIST: return {defaultColor, "ARGS"};
     case ET_RETURN: return {defaultColor, "RET"};
     case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
@@ -677,6 +677,10 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
       whiteSpaceUsed = ident; //existing ident plus one level more
       op += "\n";
       separator = ";\n";
+      if(node.type == ET_FUNCTION_LIST){
+        separator += "\n";
+        op += "\n";
+      }
       identLevel++;
     }else{
       whiteSpaceUsed = spacingBetweenArguments;
@@ -698,11 +702,13 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   
   if(node.type != ET_IF){
     //když je to block, tak je ta závorka na samostatném řádku, a chceme, aby byla na stejné úrovni jako její úvodní BLOCK
-    if(node.type == ET_BLOCK){
+    if(node.type == ET_BLOCK || node.type == ET_FUNCTION_LIST){
       whiteSpaceUsed.pop_back();
       whiteSpaceUsed.pop_back();
     }
-    op += whiteSpaceUsed + color + ")" + noColor;
+    auto closingBracket = whiteSpaceUsed + color + ")" + noColor;
+    std::cout << closingBracket << '\n';
+    op += closingBracket;
   }
   return op;
 
