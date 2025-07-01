@@ -1402,10 +1402,30 @@ std::string slurp(std::ifstream& in) {
     return sstr.str();
 }
 
+//Python style #comments in code
+std::string strip_comments(std::string input){
+  std::string result;
+  result.reserve(input.length()); //assuming ascii, 1 character is 1 byte
+  bool inComment = false;
+  for(char c: input){
+    if(c == '#'){
+      inComment = true;
+    }
+    if(c == '\n'){
+      inComment = false;
+    }
+    if(!inComment){
+      result += c;
+    }
+  }
+  return result;
+}
+
+
 int main(){
 
   std::ifstream file("zdrojak.txt");
-  std::string source = slurp(file);
+  std::string source = strip_comments(slurp(file));
 
   std::cout << "PUVODNI ZDROJAK:\n\n" << source << "\n";
 

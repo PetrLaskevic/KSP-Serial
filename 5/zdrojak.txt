@@ -1,6 +1,7 @@
+#kazdy program musi mit funkci main
 fn main(){
-    print multiply2(3,20);
-    print factorial(11);
+    multiply2(3,20); #60
+    print factorial(11); #39916800
     return 100;
 }
 
