@@ -1,6 +1,12 @@
 fn main(){
     print multiply2(3,20);
+    print factorial(11);
     return 100;
+}
+
+fn factorial(n){
+    if(n == 1) return 1;
+    return n * factorial(n-1); 
 }
 
 fn multiply(a,b){
