@@ -1,5 +1,22 @@
 fn main(){
-    sum(6,5);
+    print multiply2(3,20);
+    return 100;
+}
+
+fn multiply(a,b){
+    var result = 0;
+    for(var c = 0; c < b; c = c + 1){
+        result = result + a;
+    }
+    return result;
+}
+
+fn multiply2(a,b){
+    var result = 0;
+    for(var c = 0; c < b; c = c + 1){
+        result = sum(result, a);
+    }
+    return result;
 }
 
 fn sum(a,b){
@@ -11,4 +28,5 @@ fn sudaCisla(od, do){
         var delitelne2 = i / 2 == (i + 1) / 2;
         if (delitelne2) print i;
     }
+    return 0;
 }

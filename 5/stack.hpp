@@ -5,6 +5,7 @@
 #include <variant>
 #include <vector>
 #include <map>
+#include <ranges>
 
 /*
 Zadani zde: https://ksp.mff.cuni.cz/h/ulohy/37/zadani1.html#task-37-1-S
@@ -74,6 +75,7 @@ unordered_map<string, int> promenne;
 int ip;
 
 struct Function {
+  //to znamená, že jsme si v callech povolili jenom promenne a ne vyrazy
   std::vector<std::string> args;
   std::vector<Instruction> code;
 };
@@ -286,6 +288,37 @@ int interpret(
       assert(!empty(zasobnik));
       return zasobnik.back();
     } break;
+
+    case OP_CALL: {
+      auto callName = std::get<string>(ins.value);
+      Function call = program.at(callName);
+      //nazvy paramatru, ktere ta funkce ma
+      //jejich hodnoty pro ten call jsou na stacku
+      std::vector<std::string> args = call.args;
+      //asi chceme copy by value, ne by reference
+      //taky chceme aby nekolidovaly nazvy promennych mezi funkcemi
+      // => proto nove_promenne
+      unordered_map<std::string, int> nove_promenne;
+      //pozpátku protože args je        "a","b"
+      //           a zasobnik je   ... , 6,  5
+      for(std::string arg: args | std::ranges::views::reverse){
+        nove_promenne[arg] = zasobnik.back();
+        zasobnik.pop_back();
+      }
+      cout << "Alles klar?\n";
+      std::vector<Instruction> code = call.code;
+      //chceme aby nějak fungovaly věci typu var a = b(c);
+      //=> to budou, stačí zavolat interpret(),
+      //který na zásobníku svrchu nechá výslednou hodnotu
+      interpret(program, callName, zasobnik, nove_promenne);
+      cout << "Je pravda? " << (zasobnik.size() > 0) << "\n";
+      //nechceme ale sem dávat return interpret() nebo tak,
+      //protože bychom skončili, a další instrukce ve funkci po function callu by se už nevykonaly  
+      // int callReturnValue = zasobnik.back();
+      // zasobnik.pop_back();
+      // return callReturnValue;
+
+    }
 
     }
     ip += 1;

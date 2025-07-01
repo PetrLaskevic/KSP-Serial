@@ -1,0 +1,27 @@
+fn main(){
+    print 2;
+    print sum(6,5) + sum(3,2);
+    print 69;
+    print multiply(3,2);
+    return 0;
+}
+
+fn multiply(a,b){
+    for(var c = 0; c < b - 1; c = c + 1){
+        print c;
+        a = a + a;
+    }
+    return a;
+}
+
+fn sum(a,b){
+    return a + b;
+}
+
+fn sudaCisla(od, do){
+    for(var i = 10; i < 35; i = i + 1) {
+        var delitelne2 = i / 2 == (i + 1) / 2;
+        if (delitelne2) print i;
+    }
+    return 0;
+}

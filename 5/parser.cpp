@@ -762,7 +762,9 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_BLOCK &&
       expr.type != ET_AND &&
       expr.type != ET_OR &&
-      expr.type != ET_FN
+      expr.type != ET_FN &&
+      expr.type != ET_CALL &&
+      expr.type != ET_RETURN
     ){
       for (auto& operand : expr.children) {
         // std::cout << "operand: " << allOPToString(operand).text << "\n"; 
@@ -924,36 +926,6 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_NOT});
     } break;
     case ET_GREATER: {
-      //Problém je, že mám jenom instrukce OP_LT, OP_EQ a OP_NOT
-      //a taky, že v rámci výrazu (expression), který řeším, můžu mít přiřazení do proměnné.
-      //Tedy nemůžu říct a < b takže b > a, a prostě prohodit pořadí callů emitu
-      //protože bych mohl mít (a = a+3) > a*2, kdy 1. musím vyhodnotit levou stranu a až pak pravou 
-      //(kde už je nová hodnota z levé strany)
-      //(myslel jsem si, že můj dřívejší zákaz řetězení (asociativity) logických operátorů mi pomůže, ale na tohle to nemá vliv)
-      //=> Právě kvůli těm přiřazením proměnných (a v budoucnu function callům) je v zadání to 
-          // "Zachovávejte pořadí vyhodnocení operandů zleva doprava. 
-          //Pokud potřebujete argumenty v opačném pořadí, musíte je prohodit nějak jinak"
-      // "Například můžete přiřadit do pomocných proměnných, jen pozor, aby jejich jména nekolidovala s něčím jiným."
-        //=> na úrovni instrukcí, to by šlo, ale musel bych si zakázat buď dva názvy proměnných pro uživatele (vyhrazeno pro toto)
-        //a nebo XOR swap s jednou
-      //já bych radši nezakazoval uživateli žádnou proměnnou, ALE ASI TO BEZ TOHO NEJDE (min 1 bych v kombinaci se swapem potřeboval)
-        //chtěl jsem provést:
-          //1.  ET_LESS a pak na to dal OP_NOT, tedy >=
-          //2. pak ověřit rovnost
-      
-      //chtěl jsem použít instrukci OP_DUP v kombinaci s mou OP_SWAP 
-      //(povoleno Standou, moje instrukce, která prohodí 2 věci na zásobníku)
-      //ALE ASI NEJDE:
-      //chtěl jsem dostat: (A = levá, B = pravá)
-      //A
-      //B
-      //A
-      //B
-      //kdy jednu dvojici by požralo >= a druhou !=, pak bych udělal && (to jde, OP_ADD a OP_EQ == 2)
-      //jenže duplikací si vyrobím 2 stejné hodnoty za sebou, které pak swapovat nemá smysl
-      //kdyby to byla duplikace posledních 2 hodnot, tak by to šlo, nebo swap nechávající horní hodnotu a swapující 2 pod tím
-
-      //takže proměnné it is
 
       Expr leftSide = expr.children[0];
       emit(program, leftSide);
@@ -968,22 +940,6 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
       program.push_back(Instruction{.op = OP_LT});
 
-      //ale pro fun convoluted vec, co me napadlo jako prvni: 
-      //takže teď už je mám v proměnných, takže můžu provést (a >= b) && (a != b) pro a > b
-      // >=
-      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
-      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
-      // program.push_back(Instruction{.op = OP_LT});
-      // program.push_back(Instruction{.op = OP_NOT});
-      // // !=
-      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit"});
-      // program.push_back(Instruction{.op = OP_LOAD, .value = "promenna_jejiz_jmeno_nelze_vyslovit2"});
-      // program.push_back(Instruction{.op = OP_EQ});
-      // program.push_back(Instruction{.op = OP_NOT});
-      // //teď mám výsledky, můžu &&
-      // program.push_back(Instruction{.op = OP_ADD}); //1+1=2
-      // program.push_back(Instruction{.op = OP_PUSH, .value = 2});
-      // program.push_back(Instruction{.op = OP_EQ});
     } break;
     case ET_LESS_EQUAL: {
       //kvůli vracejícím assignmentům a v budoucnu function callům
@@ -1175,6 +1131,12 @@ void emit(std::vector<Instruction> &program,
     case ET_CALL: {
       emit_call(program, expr);
     } break;
+    case ET_RETURN: {
+      emit(program, expr.children[0]);
+      program.push_back(Instruction{
+        .op = OP_RET
+      });
+    }
   } 
 }
 //from stack.hpp:
@@ -1479,7 +1441,7 @@ int main(){
   std::vector<int> stack = {};
   //proměnné, které to bude mít k dispozici, žijí zde
   std::unordered_map<std::string, int> vars;
-  // interpret(program,"main");
+  interpret(program,"main", stack, vars);
   cout << "Stack length: " << stack.size() << "\n";
   for(auto el: stack){
     cout << el << "\n";
