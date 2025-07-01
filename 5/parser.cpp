@@ -834,6 +834,11 @@ void emit(std::vector<Instruction> &program,
       program.push_back(Instruction{
           .op = OP_PUSH, .value = value});
     } break;
+    case ET_STRING: {
+      program.push_back(Instruction{
+        .op = OP_PUSH, .value = expr.value
+      });
+    } break;
     case ET_NAME: {
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
@@ -1477,12 +1482,16 @@ int main(){
   //data stack pro instrukce je však ponechán společný
   auto program = emit_program(ast);
   //stack, na kterém to actually poběží
-  std::vector<int> stack = {};
+  std::vector<Variable> stack = {};
   //proměnné, které to bude mít k dispozici, žijí zde
-  std::unordered_map<std::string, int> vars;
+  std::unordered_map<std::string, Variable> vars;
   interpret(program,"main", stack, vars);
   cout << "Stack length: " << stack.size() << "\n";
   for(auto el: stack){
-    cout << el << "\n";
+    if(el.type() == NUMBER){
+      std::cout << get<int>(el.value) << "\n";
+    }else if(el.type() == STRING){
+      std::cout << get<string>(el.value) << "\n";
+    }
   }
 }

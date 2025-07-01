@@ -61,6 +61,8 @@ struct Instruction {
   //pamatovat dalsi hodnoty
   //variant umoznuje mit v policku value ruzne typy: int, string, nebo monostate (= default placeholder)
   //cilem potom je k tomu mit type safe moznost jak k tomu pristupovat
+  
+  //z nějakého důvodu se to úplně rozbije, když bych chtěl mít tady Variable
   variant<monostate, int, string> value = monostate{};
 
   //pak funkce std::get<string>(ins.value) z toho vezme string, pokud tam je, a jinak hodi error
@@ -80,12 +82,30 @@ struct Function {
   std::vector<Instruction> code;
 };
 
+// na to je potřeba vědět typ
+// typedef std::variant<int, std::string> Variable;
+
+enum VarType {
+  NUMBER,
+  STRING,
+  NOTHING
+};
+
+struct Variable {
+  std::variant<int, std::string> value;
+  VarType type(){
+    if(value.index() == 0) return NUMBER;
+    else if(value.index() == 1) return STRING;
+    else return NOTHING;
+  }
+};
+
 //nově kvůli podpoře funkcí bude rekurzivní
-int interpret(
+Variable interpret(
     std::map<std::string, Function> const &program,
     std::string name,
-    vector<int> &zasobnik,
-    unordered_map<std::string, int> &promenne) {
+    vector<Variable> &zasobnik,
+    unordered_map<std::string, Variable> &promenne) {
 
   Function functionToRun = program.at(name);
   vector<Instruction> instrukce = functionToRun.code;
@@ -99,7 +119,12 @@ int interpret(
 
     switch (ins.op) {
     case OP_PRINT: {
-      println("PRINT: {}", zasobnik.back());
+      auto el = zasobnik.back();
+      if(el.type() == NUMBER){
+        std::cout << "PRINT: " <<  get<int>(el.value) << "\n";
+      }else if(el.type() == STRING){
+        std::cout << "PRINT: " << get<string>(el.value) << "\n";
+      }
     } break;
 
     case OP_LOAD: {
@@ -110,7 +135,7 @@ int interpret(
       // non-argument constructor); src: https://comp.lang.cpp.moderated.narkive.com/ijAtjHG0/unordered-map-non-existent-key
       //takže kontroluju, jestli tam je (c++ 20)
       if(!promenne.contains(get<string>(ins.value))){
-        cerr << "ERROR: Proměnná '" << get<string>(ins.value) << "' nebyla deklarována! (pro deklaraci `var a;` (výchozí hodnota je 0))\n";
+        std::cerr << "ERROR: Proměnná '" << get<string>(ins.value) << "' nebyla deklarována! (pro deklaraci `var a;` (výchozí hodnota je 0))\n";
         //kdybych tady nereturnoval tak operátor [] ji v unordered_map vytvoří s hodnotou 0
         std::exit(1);
       }
@@ -132,7 +157,13 @@ int interpret(
 
     case OP_PUSH: {
       //da numerickou hodnotu (treba 8) na zasobnik
-      zasobnik.push_back(get<int>(ins.value));
+      //nebo nove i string literal - trochu jsem si pomohl tim, ze tam davam struct
+      if(std::holds_alternative<int>(ins.value)){
+        zasobnik.push_back(Variable(get<int>(ins.value)));
+      }//nov povolím tady string => assumption, že to je string literal, pro proměnné máme OP_STORE
+      else if(std::holds_alternative<std::string>(ins.value)){
+        zasobnik.push_back(Variable(get<std::string>(ins.value)));
+      }
     } break;
 
     case OP_POP: {
@@ -151,28 +182,41 @@ int interpret(
         cout << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_ADD!\n";
         break;
       }
-      int second = zasobnik.back();
+      Variable second = zasobnik.back();
       //pop_back v C++ nevraci hodnotu returned elementu, proto je to rozdelene do zasobnik.back() a zasobnik.pop_back()
       zasobnik.pop_back();
-      int first = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
 
-      zasobnik.push_back(first + second);
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        zasobnik.push_back(Variable(get<int>(first.value) + get<int>(second.value)));
+      }else if(first.type() == STRING && second.type() == STRING){
+        zasobnik.push_back(Variable(get<std::string>(first.value) + get<std::string>(second.value)));
+      }else{
+        std::cerr << "Nejsme JS, nebudeme míchat operandy string a int\n";
+        std::exit(1);
+      }
+      
     } break;
     case OP_SUB: {
       //sebere 2 hodnoty ze zasobniku, a da na zasobnik jejich rozdil
       //pr pokud v zasobniku jenom jeden item, tak to muze popovat nahodny bordel
       if(zasobnik.size() < 2){
-        cout << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_SUB!\n";
+        std::cerr << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_SUB!\n";
         break;
       }
       //  druhý operand byla první hodnota ze zásobníku a první operand druhá hodnota ze zásobníku
-      int second = zasobnik.back();
+      Variable second = zasobnik.back();
       zasobnik.pop_back();
-      int first = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
-      zasobnik.push_back(first - second);
 
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        zasobnik.push_back(Variable(get<int>(first.value) - get<int>(second.value)));
+      }else{
+        std::cerr << "Odčítání podporujeme jenom na číslech";
+        std::exit(1);
+      }
     } break;
     case OP_MUL: {
       // Implementuje integer multiplication
@@ -182,11 +226,32 @@ int interpret(
         break;
       }
 
-      int second = zasobnik.back();
+      Variable second = zasobnik.back();
       zasobnik.pop_back();
-      int first = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
-      zasobnik.push_back(second * first);
+
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        zasobnik.push_back(Variable(get<int>(first.value) * get<int>(second.value)));
+      }else if(first.type() == STRING && second.type() == NUMBER){
+        std::string result;
+        std::string repeatedString = get<std::string>(first.value);
+        for(int i = 0; i < get<int>(second.value); i++){
+          result += repeatedString;
+        }
+        zasobnik.push_back(Variable(result));
+      }else if(first.type() == NUMBER && second.type() == STRING){
+        std::string result;
+        std::string repeatedString = get<std::string>(second.value);
+        for(int i = 0; i < get<int>(first.value); i++){
+          result += repeatedString;
+        }
+        zasobnik.push_back(Variable(result));
+      }else{
+        std::cerr << "Stringy navzájem nenásobíme\n";
+        std::exit(1);
+      }
+
     } break;
     case OP_DIV: {
       // Implementuje integer division (tedy zaukrouhleni dolu)
@@ -195,16 +260,21 @@ int interpret(
         cout << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_MUL!\n";
         break;
       }
-      int second = zasobnik.back();
+
+      Variable second = zasobnik.back();
       zasobnik.pop_back();
-      int first = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
-      if(second == 0){
-        cout << "Pozor, deleni 0\n";
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        if(get<int>(second.value) == 0){
+          std::cerr << "Pozor, dělení 0\n";
+          std::exit(1);
+        }
+        zasobnik.push_back(Variable(get<int>(first.value) / get<int>(second.value)));
+      }else{
+        std::cerr << "Stringy nedělíme!\n";
         std::exit(1);
       }
-      zasobnik.push_back(first / second);
-
     } break;
     case OP_DUP: {
       // Odebere hodnotu ze zasobniku a hned ji tam 2x prida
@@ -213,17 +283,22 @@ int interpret(
       // zasobnik.push_back(val);
       // zasobnik.push_back(val);
       //=nemusi ji vubec odebirat:
-      int val = zasobnik.back();
+      auto val = zasobnik.back();
       zasobnik.push_back(val);
     } break;
 
     case OP_BRANCH: {
-     int podminka = zasobnik.back();
+     Variable podminka = zasobnik.back();
      zasobnik.pop_back();
-     if(podminka){
-      ip = get<int>(ins.value);
-      //continue abychom se vyhnuli ip+=1 dole
-      continue;
+     if(podminka.type() == NUMBER){
+      if(get<int>(podminka.value)){
+        ip = get<int>(ins.value);
+        //continue abychom se vyhnuli ip+=1 dole
+        continue;
+      }
+     }else{
+      std::cerr << "OP_BRANCH vyžaduje číslo!\n";
+      std::exit(1);
      }
 
     } break;
@@ -240,7 +315,8 @@ int interpret(
         cout << "Pozor, na zasobniku neni zadna hodnota, OP_NOT\n";
         break;
       }
-      int value = zasobnik.back();
+      //tady už ať si to hodí výjimku, !"text" se nestane
+      int value = get<int>(zasobnik.back().value);
       zasobnik.pop_back();
       //ne nutně 1, cokoliv truthy
       if(value >= 1){
@@ -248,14 +324,7 @@ int interpret(
       }else if (value == 0){
         value = 1;
       }
-      zasobnik.push_back(value);
-     
-    //tez funguje, chtelo se mi si trosku pohrat s C++
-    //   if(zasobnik.size() > 0){
-    //     //vector.back() can be used to assign a value to the last element of a vector
-    //     // => as it returns a reference to the last element. Better make sure it's not empty first! //https://stackoverflow.com/questions/13851367/can-vector-back-be-used-to-assign-a-value-to-the-last-element-of-a-vector
-    //     zasobnik.back() = !zasobnik.back();
-    //   }
+      zasobnik.push_back(Variable(value));
     } break;
 
     case OP_EQ: {
@@ -264,11 +333,20 @@ int interpret(
         cout << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_EQ!\n";
         break;
       }
-      int a = zasobnik.back();
+      Variable second = zasobnik.back();
       zasobnik.pop_back();
-      int b = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
-      zasobnik.push_back(a == b);
+
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        zasobnik.push_back(Variable(get<int>(first.value) == get<int>(second.value)));
+      }else if(first.type() == STRING && second.type() == STRING){
+        zasobnik.push_back(Variable(get<string>(first.value) == get<string>(second.value)));
+      }else{
+        std::cerr << "Porovnání stringu a intu!\n";
+        std::exit(1);
+      }
+      
     } break;  
 
     case OP_LT: {
@@ -277,11 +355,16 @@ int interpret(
         cout << "Pozor, na zasobniku nejsou alespon dve hodnoty, OP_LT!\n";
         break;
       }
-      int first = zasobnik.back();
+      Variable second = zasobnik.back();
       zasobnik.pop_back();
-      int second = zasobnik.back();
+      Variable first = zasobnik.back();
       zasobnik.pop_back();
-      zasobnik.push_back(second < first);
+      if(first.type() == NUMBER && second.type() == NUMBER){
+        zasobnik.push_back(Variable(get<int>(first.value) < get<int>(second.value)));
+      }else{
+        std:cerr << "Nepodporujeme < mezi stringy nebo mezi stringem a číslem\n";
+        std::exit(1);
+      }
     } break;
 
     case OP_RET: {
@@ -298,7 +381,7 @@ int interpret(
       //asi chceme copy by value, ne by reference
       //taky chceme aby nekolidovaly nazvy promennych mezi funkcemi
       // => proto nove_promenne
-      unordered_map<std::string, int> nove_promenne;
+      unordered_map<std::string, Variable> nove_promenne;
       //pozpátku protože args je        "a","b"
       //           a zasobnik je   ... , 6,  5
       for(std::string arg: args | std::ranges::views::reverse){
