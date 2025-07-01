@@ -406,7 +406,9 @@ Expr primary(TokenScanner &ts) {
     auto name = token.value;
     //name( je function call
     if(ts.match(TK_LPAREN)){
-      return arg_list(name, ts);
+      Expr nameNode = Expr(ET_NAME, name);
+      Expr args =  arg_list(name, ts);
+      return Expr(ET_CALL, {nameNode, args});
     }
     return Expr(ET_NAME, token.value);
   }
@@ -621,6 +623,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_ARG_LIST: return {defaultColor, "ARGS"};
     case ET_RETURN: return {defaultColor, "RET"};
     case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
+    case ET_CALL: return {defaultColor, "CALL"};
     //nic není pravda
     default: return {defaultColor, ""};
   }
