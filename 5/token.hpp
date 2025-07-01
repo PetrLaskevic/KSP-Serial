@@ -32,7 +32,7 @@ enum TokenType {
   TK_WHILE, TK_FN, TK_RETURN, TK_COMMA,
 
   // literály
-  TK_NAME, TK_NUMBER,
+  TK_NAME, TK_NUMBER, TK_STRING,
   
   // poslední token, značí konec souboru
   TK_EOF
@@ -42,7 +42,7 @@ enum TokenType {
 struct Token {
   TokenType type;
 
-  // pouze u TK_NAME a TK_NUMBER, jinak ""
+  // pouze u TK_NAME a TK_NUMBER a TK_STRING, jinak ""
   std::string value;
 
   int row;
@@ -90,6 +90,7 @@ std::string token_type_to_str(TokenType t) {
     case TK_FN: return "FN";
     case TK_COMMA: return "COMMA";
     case TK_RETURN: return "RETURN";
+    case TK_STRING: return "STRING";
   }
   return "<invalid token value>";
 }
@@ -271,10 +272,33 @@ std::optional<Token> match_keyword_or_name_token(Scanner &sc){
     return Token(TK_NAME, keyword_or_name, sc.row, beganTokenAtCol);
 }
 
+std::optional<Token> match_string_literal(Scanner &sc){
+  if(sc.peek() != '"'){
+    return std::nullopt;
+  }
+  int beginColumn = sc.column;
+  sc.advance();
+  std::string result;
+  while(!sc.is_at_end() && sc.peek() != '"'){
+    result += sc.peek();
+    sc.advance();
+  }
+  if(sc.peek() != '"'){
+    std::cout << "Po uvozovce musí být někde uvozovka!\n";
+    std::exit(1);
+  }
+  sc.advance();
+  return Token(TK_STRING, result, sc.row, beginColumn);
+}
+
 std::optional<Token> lex_one(Scanner &sc) {
   // přeskoč whitespace
   while (std::isspace(sc.peek())) {
     sc.advance();
+  }
+  std::optional<Token> foundStringLiteral = match_string_literal(sc);
+  if(foundStringLiteral.has_value()){
+    return foundStringLiteral;
   }
   std::optional<Token> foundOperator = match_operator_token(sc);
   if(foundOperator.has_value()){

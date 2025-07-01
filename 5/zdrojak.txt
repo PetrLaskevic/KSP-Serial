@@ -1,5 +1,6 @@
 #kazdy program musi mit funkci main
 fn main(){
+    var a = "ahoj nejaky _2135/*-+ text";
     multiply2(3,20); #60
     print factorial(11); #39916800
     return 100;

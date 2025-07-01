@@ -106,7 +106,8 @@ enum ExprType {
   ET_FN,
   ET_RETURN,
   ET_FUNCTION_LIST,
-  ET_CALL
+  ET_CALL,
+  ET_STRING, //pro string literaly 
 };
 
 //vrchol AST
@@ -318,6 +319,12 @@ Expr return_statement(TokenScanner &ts){
   return Expr(ET_RETURN, {what});
 }
 
+Expr string_literal(TokenScanner &ts){
+  std::string value = ts.peek().value;
+  ts.advance();
+  return Expr(ET_STRING, value);
+}
+
 Expr statement(TokenScanner &ts) {
   if (ts.match(TK_PRINT)) return printStatement(ts);
   // if (ts.match(TK_VAR)) return var_statement(ts); //mám v rámci assignment v expression, snad v pohodě
@@ -386,6 +393,8 @@ Expr arg_list(std::string fn_name, TokenScanner &ts){
 
 Expr primary(TokenScanner &ts) {
   auto token = ts.peek();
+
+  if(ts.check(TK_STRING)) return string_literal(ts);
 
   //list našeho stromu
   if (ts.match(TK_NUMBER)) {
@@ -624,6 +633,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_RETURN: return {defaultColor, "RET"};
     case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
     case ET_CALL: return {defaultColor, "CALL"};
+    case ET_STRING: return {defaultColor, "STRING"};
     //nic není pravda
     default: return {defaultColor, ""};
   }
@@ -650,6 +660,9 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
   }
   if(node.type == ET_VAR){
     return "VAR(" + node.value + ")";
+  }
+  if(node.type == ET_STRING){
+    return "STR(" + node.value + ")";
   }
   //any number of children: ET_BLOCK
   //expressions: 2 children (binary operators) or 1 child (unary operators)
