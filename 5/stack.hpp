@@ -271,6 +271,7 @@ Variable interpret(
       }else if(first.type() == STRING && second.type() == NUMBER){
         std::string result;
         std::string repeatedString = get<std::string>(first.value);
+        //číslo < 0 se implicitně chová jako 0, mohl bych dát warning
         for(int i = 0; i < get<int>(second.value); i++){
           result += repeatedString;
         }
