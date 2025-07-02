@@ -216,6 +216,17 @@ Variable interpret(
         zasobnik.push_back(Variable(get<int>(first.value) + get<int>(second.value)));
       }else if(first.type() == STRING && second.type() == STRING){
         zasobnik.push_back(Variable(get<std::string>(first.value) + get<std::string>(second.value)));
+      }else if(first.type() == INSIDE_STRING_CHAR_COPY && second.type() == INSIDE_STRING_CHAR_COPY){
+        std::string result = "  ";
+        //get<char>(first.value) + get<char>(second.value) would just sum up the numbers
+        //ASCII o + j = 111 + 106 == 217
+        result[0] = get<char>(first.value);
+        result[1] = get<char>(second.value);
+        zasobnik.push_back(Variable(result));
+      }else if(first.type() == INSIDE_STRING_CHAR_COPY && second.type() == STRING){
+        zasobnik.push_back(get<char>(first.value) + get<std::string>(second.value));
+      }else if(first.type() == STRING && second.type() == INSIDE_STRING_CHAR_COPY){
+        zasobnik.push_back(get<std::string>(first.value) + get<char>(second.value));
       }else{
         std::cerr << "Nejsme JS, nebudeme míchat operandy string a int\n";
         std::exit(1);

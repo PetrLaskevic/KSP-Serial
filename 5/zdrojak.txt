@@ -3,6 +3,12 @@ fn main(){
     var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
     print a;
     print a[2];
+    var b = a[2] + a[3]; # * 2 + "vno"; #hovno
+    print b;
+    b = b + a[0];
+    b = a[0];
+    b = a[0] + a[1];
+    print b;
     #var c = 2;
     #var b = "ha" * 3; 
     #print b;
