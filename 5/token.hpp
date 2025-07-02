@@ -25,13 +25,16 @@ enum TokenType {
   TK_LESS_EQUAL, TK_LBRACE, TK_LPAREN, TK_RBRACE,
   TK_RPAREN,
 
+  //[] závorky pro indexování stringů
+  TK_L_SQ_BRACKET, TK_R_SQ_BRACKET,
+  // Boolean operátory
   TK_AND, TK_OR,
 
   // Klíčová slova
   TK_ELSE, TK_FOR, TK_IF, TK_PRINT, TK_VAR,
   TK_WHILE, TK_FN, TK_RETURN, TK_COMMA,
 
-  // literály
+  // Literály
   TK_NAME, TK_NUMBER, TK_STRING,
   
   // poslední token, značí konec souboru
@@ -184,6 +187,8 @@ match_operator_token(Scanner &sc) {
     if(sc.match('}')) return Token(TK_RBRACE, "", sc.row, beganTokenAtCol);
     if(sc.match(')')) return Token(TK_RPAREN, "", sc.row, beganTokenAtCol);
     if(sc.match(',')) return Token(TK_COMMA, "", sc.row, beganTokenAtCol);
+    if(sc.match('[')) return Token(TK_L_SQ_BRACKET, "", sc.row, beganTokenAtCol);
+    if(sc.match(']')) return Token(TK_R_SQ_BRACKET, "", sc.row, beganTokenAtCol); 
 
     //no operator matched
     return std::nullopt;

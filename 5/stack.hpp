@@ -51,6 +51,7 @@ enum Opcode {
   OP_NOP,
   OP_CALL,
   OP_RET,
+  OP_INDEX, //pro str[2]
 };
 
 struct Instruction {
@@ -86,18 +87,50 @@ struct Function {
 // typedef std::variant<int, std::string> Variable;
 
 enum VarType {
+  INSIDE_STRING_POINTER,
   NUMBER,
   STRING,
   NOTHING
 };
 
+#include <functional>
 struct Variable {
-  std::variant<int, std::string> value;
+  //pro retezec[x] potrebuju mit referenci na retezec + x,  aby to mohlo být jak jako access na to by stačila kopie přes char
+  //tak i write - kdyby bylo na levé straně assignu
+  //=> problém je ale realokace, kdyby se na pravé straně (nebo i někde jinde, prostě než se dostaneme k tomuhle na stacku) někde stala realokace, tak je to problém
+  //proto char& nebo char* nejde
+  int index;
+  std::variant<std::function<char&()>,int, std::string> value;
+
+  //protože jsme si ali přidali index pro to retezec[index] lambda funkce magii => int index jako další proměnnou
+  //tak musíme napsat manuálně constructory, aby pro int nebo string ignorovaly int index, ale pro string a index ne
+  Variable(std::string v): index(-1), value{v} {}
+  Variable(int i): index(-1), value{i} {}
+  Variable(std::string &target, int i): index(i) {
+    bindTo(target);
+  }
+  //s tím se pak pojí i to, že tam musí být nějaký default constructor (dostal jsem "no matching function for call to ‘Variable::Variable()")
+  Variable() : index(-1), value{0} {}
+
   VarType type(){
-    if(value.index() == 0) return NUMBER;
-    else if(value.index() == 1) return STRING;
+    if(value.index() == 0) return INSIDE_STRING_POINTER;
+    if(value.index() == 1) return NUMBER;
+    else if(value.index() == 2) return STRING;
     else return NOTHING;
   }
+
+  void bindTo(std::string& target) {
+    value = [&target, this]() -> char& { return target[index]; };
+  }
+
+  void assign(char ch) {
+    std::get<std::function<char&()>>(value)() = ch;
+  }
+
+  char get() const {
+    return std::get<std::function<char&()>>(value)();
+  }
+
 };
 
 //nově kvůli podpoře funkcí bude rekurzivní
@@ -399,6 +432,17 @@ Variable interpret(
       // int callReturnValue = zasobnik.back();
       // zasobnik.pop_back();
       // return callReturnValue;
+    } break;
+
+    case OP_INDEX: {
+      int index = get<int>(zasobnik.back().value);
+      zasobnik.pop_back();
+      Variable var = promenne[get<string>(ins.value)];
+      if(std::holds_alternative<string>(var.value)){
+        zasobnik.push_back(Variable(get<string>(var.value), index));
+      }else{
+        std::cerr << "Čísla zatím neindexujeme\n";
+      }
     } break;
 
     }

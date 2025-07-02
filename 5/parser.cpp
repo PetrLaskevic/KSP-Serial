@@ -108,6 +108,7 @@ enum ExprType {
   ET_FUNCTION_LIST,
   ET_CALL,
   ET_STRING, //pro string literaly 
+  ET_INDEX_STR, //pro str[2]
 };
 
 //vrchol AST
@@ -413,11 +414,16 @@ Expr primary(TokenScanner &ts) {
   //list našeho stromu, použítí proměnné někde místo čísla ("dosazení")
   if (ts.match(TK_NAME)) {
     auto name = token.value;
+    Expr nameNode = Expr(ET_NAME, name);
     //name( je function call
     if(ts.match(TK_LPAREN)){
-      Expr nameNode = Expr(ET_NAME, name);
       Expr args =  arg_list(name, ts);
       return Expr(ET_CALL, {nameNode, args});
+    }
+    if(ts.match(TK_L_SQ_BRACKET)){
+      Expr index = expression(ts);
+      ts.consume(TK_R_SQ_BRACKET, "Za 'promenna[' musí někde být ']'");
+      return Expr(ET_INDEX_STR, {nameNode, index});
     }
     return Expr(ET_NAME, token.value);
   }
@@ -430,7 +436,7 @@ Expr primary(TokenScanner &ts) {
   }
 
   //trochu hack, aby netrippovalo, když uvidí nekde , (kdyz se z arg_list provola sem)
-  if(!ts.match(TK_COMMA)){
+  if(!ts.match(TK_COMMA) && !ts.check(TK_R_SQ_BRACKET)){
     ts.error("Unexpected token");
   }
 
@@ -634,6 +640,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
     case ET_CALL: return {defaultColor, "CALL"};
     case ET_STRING: return {defaultColor, "STRING"};
+    case ET_INDEX_STR: return {defaultColor, "AT"};
     //nic není pravda
     default: return {defaultColor, ""};
   }
@@ -783,7 +790,8 @@ void emit(std::vector<Instruction> &program,
       expr.type != ET_OR &&
       expr.type != ET_FN &&
       expr.type != ET_CALL &&
-      expr.type != ET_RETURN
+      expr.type != ET_RETURN &&
+      expr.type != ET_INDEX_STR
     ){
       for (auto& operand : expr.children) {
         // std::cout << "operand: " << allOPToString(operand).text << "\n"; 
@@ -839,6 +847,13 @@ void emit(std::vector<Instruction> &program,
         .op = OP_PUSH, .value = expr.value
       });
     } break;
+    case ET_INDEX_STR: {
+      emit(program, expr.children[1]); //emit index expression
+      program.push_back(Instruction{
+        .op = OP_INDEX,
+        .value = expr.children[0].value //the string variable value
+      });
+    }
     case ET_NAME: {
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
