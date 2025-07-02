@@ -1,12 +1,13 @@
 #kazdy program musi mit funkci main
 fn main(){
     var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
-    #print a[2];
-    var c = 2;
-    var b = "ha" * 3; 
-    print b;
-    print multiply2(multiply2(3,20), 2); #60*2 = 120
-    print factorial(11); #39916800
+    print a;
+    print a[2];
+    #var c = 2;
+    #var b = "ha" * 3; 
+    #print b;
+    #print multiply2(multiply2(3,20), 2); #60*2 = 120
+    #print factorial(11); #39916800
     return 100;
 }
 

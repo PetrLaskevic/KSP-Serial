@@ -853,7 +853,7 @@ void emit(std::vector<Instruction> &program,
         .op = OP_INDEX,
         .value = expr.children[0].value //the string variable value
       });
-    }
+    } break;
     case ET_NAME: {
       //Expr(ET_NAME, token.value); má .value string token.value svého jména
       //tahle instrukce hledá proměnnou s tím jménem v slovníku proměnných 
@@ -1456,6 +1456,12 @@ std::string strip_comments(std::string input){
 
 
 int main(){
+
+  auto lol = Variable(43);
+  Variable v(42);
+   std::cout << "index=" << v.value.index()
+            << ", value=" << get<int>(v.value)
+            << "\n";
 
   std::ifstream file("zdrojak.txt");
   std::string source = strip_comments(slurp(file));

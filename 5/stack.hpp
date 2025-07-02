@@ -104,13 +104,14 @@ struct Variable {
 
   //protože jsme si ali přidali index pro to retezec[index] lambda funkce magii => int index jako další proměnnou
   //tak musíme napsat manuálně constructory, aby pro int nebo string ignorovaly int index, ale pro string a index ne
-  Variable(std::string v): index(-1), value{v} {}
-  Variable(int i): index(-1), value{i} {}
+  Variable(std::string v): index(-1), value(v) { std::cout << "bežel string konstruktor\n";}
+  Variable(int i): index(-1), value(std::in_place_index<1>, i) { std::cout << "bežel int konstruktor\n";} //value(i) nefunguje
   Variable(std::string &target, int i): index(i) {
     bindTo(target);
+    std::cout <<"bežel string index konstruktor a nastavil index " + i + '\n';
   }
   //s tím se pak pojí i to, že tam musí být nějaký default constructor (dostal jsem "no matching function for call to ‘Variable::Variable()")
-  Variable() : index(-1), value{0} {}
+  Variable() : index(-1), value(0) { std::cout << "bežel tenhle defaultní konstruktor, nemělo by se afaik stát\n";}
 
   VarType type(){
     if(value.index() == 0) return INSIDE_STRING_POINTER;
@@ -128,6 +129,8 @@ struct Variable {
   }
 
   char get() const {
+    //tohle: std::get<std::function<char&()>>(value)
+    //vytáhne lambda funkci, a () ji pak zavolá, což vrací aktuální referenci na index-í znak toho stringu
     return std::get<std::function<char&()>>(value)();
   }
 
@@ -157,6 +160,9 @@ Variable interpret(
         std::cout << "PRINT: " <<  get<int>(el.value) << "\n";
       }else if(el.type() == STRING){
         std::cout << "PRINT: " << get<string>(el.value) << "\n";
+      }else if(el.type() == INSIDE_STRING_POINTER){
+        char out = el.get();
+        std::cout << "PRINTR:" << out << "\n";
       }
     } break;
 
