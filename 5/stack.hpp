@@ -87,51 +87,37 @@ struct Function {
 // typedef std::variant<int, std::string> Variable;
 
 enum VarType {
-  INSIDE_STRING_POINTER,
+  INSIDE_STRING_CHAR_COPY,
   NUMBER,
   STRING,
   NOTHING
 };
 
-#include <functional>
 struct Variable {
-  //pro retezec[x] potrebuju mit referenci na retezec + x,  aby to mohlo být jak jako access na to by stačila kopie přes char
-  //tak i write - kdyby bylo na levé straně assignu
-  //=> problém je ale realokace, kdyby se na pravé straně (nebo i někde jinde, prostě než se dostaneme k tomuhle na stacku) někde stala realokace, tak je to problém
-  //proto char& nebo char* nejde
-  int index;
-  std::variant<std::function<char&()>,int, std::string> value;
 
-  //protože jsme si ali přidali index pro to retezec[index] lambda funkce magii => int index jako další proměnnou
-  //tak musíme napsat manuálně constructory, aby pro int nebo string ignorovaly int index, ale pro string a index ne
-  Variable(std::string v): index(-1), value(v) { std::cout << "bežel string konstruktor\n";}
-  Variable(int i): index(-1), value(std::in_place_index<1>, i) { std::cout << "bežel int konstruktor\n";} //value(i) nefunguje
-  Variable(std::string &target, int i): index(i) {
-    bindTo(target);
-    std::cout <<"bežel string index konstruktor a nastavil index " + i + '\n';
+  std::variant<char, int, std::string> value;
+
+  Variable(std::string v): value(v) { std::cout << "bežel string konstruktor\n";}
+  Variable(int i): value(std::in_place_index<1>, i) { std::cout << "bežel int konstruktor\n";} //value(i) nefunguje
+  //tohle urcite nebude fungovat napric funkcemi - a ani pri volani funkci
+  //var a = "ahoj";
+  //foo(a[2]);
+  //=> vlastne blbost, protoze když se emituje call, tak ještě ty proměnné máme
+  //spíš (možná) zkázat return a[2]; => pokud to je pointer tak při použití v jiné funkci přestane existovat 
+  //=> coz byl fail prechoziho commitu, ze ty veci prestavaly existovat, 7
+  //a byl by to i fail s Variable(unordered_map<std::string, Variable> variables, std::string name, int i) variantou
+  //proto takto jednoduse:
+  Variable(char c): value(c) {
+    std::cout <<"bežel string index (char) konstruktor\n";
   }
   //s tím se pak pojí i to, že tam musí být nějaký default constructor (dostal jsem "no matching function for call to ‘Variable::Variable()")
-  Variable() : index(-1), value(0) { std::cout << "bežel tenhle defaultní konstruktor, nemělo by se afaik stát\n";}
+  Variable() : value(0) { std::cout << "bežel tenhle defaultní konstruktor, nemělo by se afaik stát\n";}
 
   VarType type(){
-    if(value.index() == 0) return INSIDE_STRING_POINTER;
+    if(value.index() == 0) return INSIDE_STRING_CHAR_COPY;
     if(value.index() == 1) return NUMBER;
     else if(value.index() == 2) return STRING;
     else return NOTHING;
-  }
-
-  void bindTo(std::string& target) {
-    value = [&target, this]() -> char& { return target[index]; };
-  }
-
-  void assign(char ch) {
-    std::get<std::function<char&()>>(value)() = ch;
-  }
-
-  char get() const {
-    //tohle: std::get<std::function<char&()>>(value)
-    //vytáhne lambda funkci, a () ji pak zavolá, což vrací aktuální referenci na index-í znak toho stringu
-    return std::get<std::function<char&()>>(value)();
   }
 
 };
@@ -160,9 +146,8 @@ Variable interpret(
         std::cout << "PRINT: " <<  get<int>(el.value) << "\n";
       }else if(el.type() == STRING){
         std::cout << "PRINT: " << get<string>(el.value) << "\n";
-      }else if(el.type() == INSIDE_STRING_POINTER){
-        char out = el.get();
-        std::cout << "PRINTR:" << out << "\n";
+      }else if(el.type() == INSIDE_STRING_CHAR_COPY){;
+        std::cout << "PRINTR: " << get<char>(el.value) << "\n";
       }
     } break;
 
@@ -445,7 +430,7 @@ Variable interpret(
       zasobnik.pop_back();
       Variable var = promenne[get<string>(ins.value)];
       if(std::holds_alternative<string>(var.value)){
-        zasobnik.push_back(Variable(get<string>(var.value), index));
+        zasobnik.push_back(Variable(get<string>(var.value)[index]));
       }else{
         std::cerr << "Čísla zatím neindexujeme\n";
       }
