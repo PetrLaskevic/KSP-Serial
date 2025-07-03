@@ -1,6 +1,10 @@
 #kazdy program musi mit funkci main
+fn startswith(what, source){
+
+}
 fn main(){
     var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
+    print len(a);
     print a;
     print a[2];
     #print t; #t nebyla deklarovana

@@ -420,6 +420,20 @@ Variable interpret(
 
     case OP_CALL: {
       auto callName = std::get<string>(ins.value);
+      if(callName == "len"){
+        auto var = zasobnik.back();
+        zasobnik.pop_back();
+        if(var.type() != STRING){
+          std::cout << var.type() << "\n";
+          std::cerr << "Na čísla nelze len() volat!\n";
+          std::exit(1);
+        }
+        zasobnik.push_back(
+          //cast na int, aby to nebylo ambiguous jestli char nebo int
+          Variable((int)get<std::string>(var.value).length())
+        );
+        break; //na přístí instrukci, ale ještě předtím ip += 1
+      }
       Function call = program.at(callName);
       //nazvy paramatru, ktere ta funkce ma
       //jejich hodnoty pro ten call jsou na stacku
