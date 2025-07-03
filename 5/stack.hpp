@@ -1,5 +1,4 @@
-
-
+#include <cmath>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -97,8 +96,12 @@ struct Variable {
 
   std::variant<char, int, std::string> value;
 
-  Variable(std::string v): value(v) { std::cout << "bežel string konstruktor\n";}
-  Variable(int i): value(std::in_place_index<1>, i) { std::cout << "bežel int konstruktor\n";} //value(i) nefunguje
+  Variable(std::string v): value(v) { 
+    // std::cout << "bežel string konstruktor\n";
+  }
+  Variable(int i): value(std::in_place_index<1>, i) {
+    // std::cout << "bežel int konstruktor\n";
+  } //value(i) nefunguje
   //tohle urcite nebude fungovat napric funkcemi - a ani pri volani funkci
   //var a = "ahoj";
   //foo(a[2]);
@@ -108,10 +111,17 @@ struct Variable {
   //a byl by to i fail s Variable(unordered_map<std::string, Variable> variables, std::string name, int i) variantou
   //proto takto jednoduse:
   Variable(char c): value(c) {
-    std::cout <<"bežel string index (char) konstruktor\n";
+    // std::cout <<"bežel string index (char) konstruktor\n";
   }
   //s tím se pak pojí i to, že tam musí být nějaký default constructor (dostal jsem "no matching function for call to ‘Variable::Variable()")
-  Variable() : value(0) { std::cout << "bežel tenhle defaultní konstruktor, nemělo by se afaik stát\n";}
+  Variable() : value(0) {
+    //běží když v OP_STORE: promenne[get<string>(ins.value)] = zasobnik.back();
+    //se ta hodnota asi kopíruje => hodnoty však jsou správný a ne 0 => idk
+    //(zkoumal jsem to tak, že jsem si dal na tenhle cout breakpoint a pak jsem se díval na call stack, 
+    //a hledal tam poslední funkci, která je ještě moje a ne CPP interní
+    //==> je to interpret, pro rozkliknutí právě ta řádka v OP_STORE )
+    // std::cout << "bežel tenhle defaultní konstruktor\n";
+  }
 
   VarType type(){
     if(value.index() == 0) return INSIDE_STRING_CHAR_COPY;
@@ -440,10 +450,28 @@ Variable interpret(
     case OP_INDEX: {
       int index = get<int>(zasobnik.back().value);
       zasobnik.pop_back();
+      //promenne[] tu promennou pokud neexistuje vytvoří, proto:
+      //pro check bych mohl goto OP_LOAD (jestli switch podporuje GOTO)
+      //nebo tu logiku zkopírovat:
+      if(!promenne.contains(get<string>(ins.value))){
+        std::cerr << "ERROR: Proměnná '" << get<string>(ins.value) << "' nebyla deklarována! (pro deklaraci `var a;` (výchozí hodnota je 0))\n";
+        //kdybych tady nereturnoval tak operátor [] ji v unordered_map vytvoří s hodnotou 0
+        std::exit(1);
+      }
       Variable var = promenne[get<string>(ins.value)];
       if(std::holds_alternative<string>(var.value)){
+
+        //moje oblibena Python feature
+        if(abs(index) <= get<string>(var.value).length() && index < 0){
+          index = get<string>(var.value).length() + index;
+        }else if(index >= get<string>(var.value).length()){
+          std::cerr << "Out of bounds, hodnota " << index << " pro literal '" << get<string>(var.value) << "'\n";  
+          std::exit(1);
+        }
+
         zasobnik.push_back(Variable(get<string>(var.value)[index]));
       }else{
+        std::cout << var.type() << "\n";
         std::cerr << "Čísla zatím neindexujeme\n";
       }
     } break;
