@@ -386,8 +386,26 @@ Variable interpret(
 
       if(first.type() == NUMBER && second.type() == NUMBER){
         zasobnik.push_back(Variable(get<int>(first.value) == get<int>(second.value)));
+
       }else if(first.type() == STRING && second.type() == STRING){
         zasobnik.push_back(Variable(get<string>(first.value) == get<string>(second.value)));
+
+      }else if(first.type() == INSIDE_STRING_CHAR_COPY && second.type() == STRING){
+        auto strLen = get<string>(second.value).length();
+        if(strLen == 1){
+          zasobnik.push_back(Variable(get<char>(first.value) == get<string>(second.value)[0]));
+        }else{
+          zasobnik.push_back(Variable(((int)0)));
+        }
+      }else if(first.type() == STRING && second.type() == INSIDE_STRING_CHAR_COPY){
+        auto strLen = get<string>(first.value).length();
+        if(strLen == 1){
+          zasobnik.push_back(Variable(get<string>(first.value)[0] == get<char>(second.value)));
+        }else{
+          zasobnik.push_back(Variable(((int)0)));
+        }
+      }else if(first.type() == INSIDE_STRING_CHAR_COPY && second.type() == INSIDE_STRING_CHAR_COPY){
+        zasobnik.push_back(Variable(get<char>(first.value) == get<char>(second.value)));
       }else{
         std::cerr << "Porovnání stringu a intu!\n";
         std::exit(1);
@@ -423,16 +441,21 @@ Variable interpret(
       if(callName == "len"){
         auto var = zasobnik.back();
         zasobnik.pop_back();
-        if(var.type() != STRING){
+        if(var.type() != STRING && var.type() != INSIDE_STRING_CHAR_COPY){
           std::cout << var.type() << "\n";
           std::cerr << "Na čísla nelze len() volat!\n";
           std::exit(1);
         }
-        zasobnik.push_back(
-          //cast na int, aby to nebylo ambiguous jestli char nebo int
-          Variable((int)get<std::string>(var.value).length())
-        );
-        break; //na přístí instrukci, ale ještě předtím ip += 1
+        if(var.type() == INSIDE_STRING_CHAR_COPY){
+          zasobnik.push_back(Variable((int)1));
+          break;
+        }else{
+          zasobnik.push_back(
+            //cast na int, aby to nebylo ambiguous jestli char nebo int
+            Variable((int)get<std::string>(var.value).length())
+          );
+          break; //na přístí instrukci, ale ještě předtím ip += 1 
+        }
       }
       Function call = program.at(callName);
       //nazvy paramatru, ktere ta funkce ma

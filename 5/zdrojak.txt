@@ -1,12 +1,67 @@
 #kazdy program musi mit funkci main
 fn startswith(what, source){
+    if(len(what) > len(source)) return 0;
+    var substrLen = len(what);
+    for(var x = 0; x < substrLen; x = x + 1){
+        if(what[x] != source[x]) return 0;
+    }
+    return 1;
+}
 
+fn contains(what, source){
+    if(len(what) > len(source)) return 0;
+    if(len(what) == 0) return 1; #to be consistent with python
+    print(what);
+    print(source);
+    print "jjojojojojojojo";
+    var reachedIndex = 0;
+    var requiredIndex = len(what);
+    print(requiredIndex);
+    print "before for loop";
+    for(var pos = 0; pos < len(source); pos = pos + 1){
+        #so far nepodporujeme break
+        if(reachedIndex == requiredIndex){
+            print "reached indexes";
+            print requiredIndex;
+            print reachedIndex;
+            print -2222;
+            return 1;
+        }
+        if(source[pos] == what[reachedIndex]){
+            reachedIndex = reachedIndex + 1;
+        }else{
+            reachedIndex = 0;
+        }
+    }
+    print(reachedIndex);
+    print "before"; #taky se neprinti
+    var c = (reachedIndex == requiredIndex);
+    print "fuck";
+    print c;
+    print 69;
+    return reachedIndex == requiredIndex;
 }
 fn main(){
     var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
     print len(a);
     print a;
-    print a[2];
+
+    var d = a[2];
+    print(len(d));
+
+    #print contains("ho", "ahoj");
+    #print contains("", "ahoj");
+    print contains("ahok", "ahoj");
+
+
+    print startswith("ahoj", a); #1
+    print startswith("hrib", "hribidi"); #1
+    print startswith("skibd", "skibidi"); #0
+    print startswith(a,a); #1
+    print startswith(a, a*2); #1
+    print startswith(a*2,a); #0
+    print startswith("", a); #1
+
     #print t; #t nebyla deklarovana
     t[-37]; #hazi error
     var dalsiText = a[-1] + a[-2]; # + t[-37];
