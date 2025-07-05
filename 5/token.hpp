@@ -94,6 +94,8 @@ std::string token_type_to_str(TokenType t) {
     case TK_COMMA: return "COMMA";
     case TK_RETURN: return "RETURN";
     case TK_STRING: return "STRING";
+    case TK_L_SQ_BRACKET: return "L_SQ_BRACKET";
+    case TK_R_SQ_BRACKET: return "R_SQ_BRACKET";
   }
   return "<invalid token value>";
 }
@@ -116,15 +118,17 @@ std::string decoratedLine(std::string text, int row, int column){
 struct Scanner {
   std::string source;
   std::string originalInput; //source pred modifikacemi, pro cerr
-  int row = 0;
-  int column = 0;
+  //předtím bylo 0, pro 0 based indexing
+  //ale když už píšu kód tak se hodí aby to sedělo s textovými editory
+  int row = 1;
+  int column = 1;
 
   Scanner(std::string s) : source{s}, originalInput(s) {}
 
   void advance(size_t i = 1) {
     if(source[0] == '\n'){
         row++;
-        column = 0;
+        column = 1; //předtím bylo 0
     }else{
         column++;
     }
