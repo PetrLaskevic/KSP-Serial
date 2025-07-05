@@ -316,8 +316,16 @@ Expr for_statement(TokenScanner &ts) {
 }
 
 Expr return_statement(TokenScanner &ts){
-  Expr what = statement(ts);
-  return Expr(ET_RETURN, {what});
+  //pro podporu return; (udelám z toho return 0;)
+  if(ts.match(TK_SEMICOLON)){
+    Expr implicit0 = Expr(ET_LITERAL, "0");
+    return Expr(ET_RETURN, {implicit0});
+  }else{
+    //klasické return 0; nebo return (foo(bar) + "text") * 2;
+    //(cokoliv kde je nějaký statement)
+    Expr what = statement(ts);
+    return Expr(ET_RETURN, {what});
+  }
 }
 
 Expr string_literal(TokenScanner &ts){
@@ -727,7 +735,7 @@ std::string prefixPrint(Expr& node, int identLevel){ //int identLevel optional, 
       whiteSpaceUsed.pop_back();
     }
     auto closingBracket = whiteSpaceUsed + color + ")" + noColor;
-    std::cout << closingBracket << '\n';
+    // std::cout << closingBracket << '\n';
     op += closingBracket;
   }
   return op;

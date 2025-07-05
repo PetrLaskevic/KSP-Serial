@@ -1,0 +1,140 @@
+fn startswith(what, source){
+    if(len(what) > len(source)) return 0;
+    var substrLen = len(what);
+    for(var x = 0; x < substrLen; x = x + 1){
+        if(what[x] != source[x]) return 0;
+    }
+    return 1;
+}
+
+fn endswith(what, source){
+    if(len(what) > len(source)) return 0;
+    #pouzivam python style zaporne indexy které jsem si přidal
+    for(var x = -1; x <= -len(what); x = x - 1){
+        if(what[x] != source[x]) return 0;
+    }
+    return 1;
+}
+
+fn contains(what, source){
+    if(len(what) > len(source)) return 0;
+    if(len(what) == 0) return 1; #to be consistent with python
+
+    var reachedIndex = 0;
+    var requiredIndex = len(what);
+
+    for(var pos = 0; pos < len(source); pos = pos + 1){
+        #so far nepodporujeme break
+        if(reachedIndex == requiredIndex){
+            return 1;
+        }
+        if(source[pos] == what[reachedIndex]){
+            reachedIndex = reachedIndex + 1;
+        }else{
+            reachedIndex = 0;
+        }
+    }
+    return reachedIndex == requiredIndex;
+}
+
+fn replaceCharAtOrInsertSubstr(string, index, newChar){
+    if(index < 0 ){ #|| index >= len(what)
+        print "IndexError";
+        return;
+    }
+    var firstHalf = "";
+    for(var x = 0; x < index; x = x + 1){
+        firstHalf = firstHalf + string[x];
+    }
+    var secondHalf = "";
+    for(var x = index; x < len(what); x = x + 1){
+        secondHalf = secondHalf + string[x];
+    }
+    return firstHalf + newChar + secondHalf;
+}
+
+#kazdy program musi mit funkci main
+fn main(){
+    var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
+    print len(a);
+    print a;
+
+    var d = a[2];
+    print(len(d));
+
+    #print contains("ho", "ahoj");
+    #print contains("", "ahoj");
+    print 100;
+    print contains("ahok", "ahoj");
+    var f = "nejaky text";
+    print contains(" ", f);
+    print contains("ky", f);
+
+    print contains("g", "this enables bidirectional streaming");
+    print endswith("bidi", "hribidi");
+    print endswith("", "ahoj");
+
+    var x = "hribidi";
+    replaceCharAtOrInsertSubstr(x, 0, "ski");
+    print x;    
+
+    return 0;
+    print startswith("ahoj", a); #1
+    print startswith("hrib", "hribidi"); #1
+    print startswith("skibd", "skibidi"); #0
+    print startswith(a,a); #1
+    print startswith(a, a*2); #1
+    print startswith(a*2,a); #0
+    print startswith("", a); #1
+
+    #print t; #t nebyla deklarovana
+    t[-37]; #hazi error
+    var dalsiText = a[-1] + a[-2]; # + t[-37];
+    print dalsiText;
+    var c = 1000; #checks bound checking works
+    var b = (a[1] + a[c]) * 2 + "text"; #hohotext
+    print b;
+    b = b + a[0];
+    b = a[0];
+    b = a[0] + a[1];
+    print b;
+    #var c = 2;
+    #var b = "ha" * 3; 
+    #print b;
+    #print multiply2(multiply2(3,20), 2); #60*2 = 120
+    #print factorial(11); #39916800
+    return 100;
+}
+
+fn factorial(n){
+    if(n == 1) return 1;
+    return n * factorial(n-1); 
+}
+
+fn multiply(a,b){
+    var result = 0;
+    for(var c = 0; c < b; c = c + 1){
+        result = result + a;
+    }
+    return result;
+}
+
+fn multiply2(a,b){
+    var result = 0;
+    for(var c = 0; c < b; c = c + 1){
+        result = sum(result, a);
+    }
+    return result;
+}
+
+fn sum(a,b){
+    return a + b;
+}
+
+fn sudaCisla(od, do){
+    for(var i = 10; i < 35; i = i + 1) {
+        var delitelne2 = i / 2 == (i + 1) / 2;
+        if (delitelne2) print i;
+    }
+    return 0;
+}
