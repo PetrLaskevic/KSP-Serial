@@ -8,6 +8,15 @@ fn startswith(what, source){
     return 1;
 }
 
+fn endswith(what, source){
+    if(len(what) > len(source)) return 0;
+    #pouzivam python style zaporne indexy které jsem si přidal
+    for(var x = -1; x <= -len(what); x = x - 1){
+        if(what[x] != source[x]) return 0;
+    }
+    return 1;
+}
+
 fn contains(what, source){
     if(len(what) > len(source)) return 0;
     if(len(what) == 0) return 1; #to be consistent with python
@@ -43,6 +52,10 @@ fn main(){
     var f = "nejaky text";
     print contains(" ", f);
     print contains("ky", f);
+
+    print contains("g", "this enables bidirectional streaming");
+    print endswith("bidi", "hribidi");
+    print endswith("", "ahoj");
 
     return 0;
     print startswith("ahoj", a); #1
