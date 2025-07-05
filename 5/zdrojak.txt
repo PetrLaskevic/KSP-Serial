@@ -11,20 +11,13 @@ fn startswith(what, source){
 fn contains(what, source){
     if(len(what) > len(source)) return 0;
     if(len(what) == 0) return 1; #to be consistent with python
-    print(what);
-    print(source);
-    print "jjojojojojojojo";
+
     var reachedIndex = 0;
     var requiredIndex = len(what);
-    print(requiredIndex);
-    print "before for loop";
+
     for(var pos = 0; pos < len(source); pos = pos + 1){
         #so far nepodporujeme break
         if(reachedIndex == requiredIndex){
-            print "reached indexes";
-            print requiredIndex;
-            print reachedIndex;
-            print -2222;
             return 1;
         }
         if(source[pos] == what[reachedIndex]){
@@ -33,12 +26,6 @@ fn contains(what, source){
             reachedIndex = 0;
         }
     }
-    print(reachedIndex);
-    print "before"; #taky se neprinti
-    var c = (reachedIndex == requiredIndex);
-    print "fuck";
-    print c;
-    print 69;
     return reachedIndex == requiredIndex;
 }
 fn main(){
@@ -51,9 +38,13 @@ fn main(){
 
     #print contains("ho", "ahoj");
     #print contains("", "ahoj");
+    print 100;
     print contains("ahok", "ahoj");
+    var f = "nejaky text";
+    print contains(" ", f);
+    print contains("ky", f);
 
-
+    return 0;
     print startswith("ahoj", a); #1
     print startswith("hrib", "hribidi"); #1
     print startswith("skibd", "skibidi"); #0
