@@ -1,9 +1,16 @@
 #výměna i-tého znaku za jiný znak nebo za string (vloží se místo toho znaku)
+#ano, O(N) protože immutable strings
 fn replaceCharAt(string, index, newChar){
-    print "IndexError";
-    if(index < 0 ){ 
+    if(
+        (index >= len(string)) ||
+        (-index > len(string)) 
+    ){ 
         print "IndexError";
         return; #funguje v mem jazyce stejne jako return 0;
+    }
+    #podpora Python style záporných indexů
+    if(index < 0){
+        index = len(string) + index;
     }
     var firstHalf = "";
     for(var x = 0; x < index; x = x + 1){
@@ -28,5 +35,8 @@ fn main(){
     a = replaceCharAt(a,1, "r");
     a = replaceCharAt(a, 2, "i");
     print a;
+    print replaceCharAt(a, -1, "y");
+    print replaceCharAt(a, 7, "n");
+    
     return 100;
 }
