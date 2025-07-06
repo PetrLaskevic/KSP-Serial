@@ -146,7 +146,6 @@ Expr assignment(TokenScanner &ts);
 //mělo by mít stejnou funkčnost jako `function` ze šablony
 //(šablony na to jsem si všíiml později)
 Expr fn_definition(TokenScanner &ts){
-  cout << "i" << token_type_to_str(ts.peek().type) << "\n";
   ts.consume(TK_FN,
       "expected fn keyword to start a function");
   //za fn očekáváme jméno
@@ -159,7 +158,7 @@ Expr fn_definition(TokenScanner &ts){
   //=> museli bychom narvat parsování parametrů někam jinam
   //proto:
   Expr name = Expr(ET_NAME, ts.peek().value); 
-  std::cout << "function name is " << prefixPrint(name) << "\n";
+  // std::cout << "function name is " << prefixPrint(name) << "\n";
   ts.advance();
   ts.consume(TK_LPAREN, "expected '(' after function name");
   //a teď argument list
@@ -185,17 +184,17 @@ Expr fn_definition(TokenScanner &ts){
   }
   ts.consume(TK_RPAREN, "Expected ')' after function argument list");
   Expr argumentNode = Expr(ET_ARG_LIST, argumentList);
-  std::cout << "function arguments are " << prefixPrint(argumentNode) << "\n";
+  // std::cout << "function arguments are " << prefixPrint(argumentNode) << "\n";
   //function body
   //tady na rozdíl od if,for, while nepodporuju jeden výraz
   //asi by to šlo, ale př. JS to tak nedělá => ani autoři ne, nice
   
   ts.consume(TK_LBRACE,
      "expected '\{' to start function body");
-  std::cout << "before body\n";
+     
   Expr body = block(ts);
 
-  std::cout << "body is " << prefixPrint(body) << "\n";
+  // std::cout << "body is " << prefixPrint(body) << "\n";
 
   return Expr(ET_FN, {name, argumentNode, body});
 }
@@ -348,9 +347,7 @@ Expr statement(TokenScanner &ts) {
   //pokud { tak nový block
   if (ts.match(TK_LBRACE)) return block(ts);
   
-  cout << "pred " << ts.source.size() << "\n";
   Expr a = expression(ts);
-  cout << "po " << ts.source.size() << "\n";
   //semicolon check na jednom miste, at uz je to call do expression nebo print statement
   if(!ts.match(TK_SEMICOLON)){
     ts.error("Expected ';' after expression. Parsed so far:\n" + prefixPrint(a) + "\n");
@@ -396,7 +393,6 @@ Expr arg_list(std::string fn_name, TokenScanner &ts){
     }
   }
   ts.consume(TK_RPAREN, "Expected ')' after call argument list");
-  cout << "behem (po arg_list) " << ts.source.size() << "\n";
   return Expr(ET_ARG_LIST, argumentList);
 }
 
@@ -646,7 +642,7 @@ printColorETpair allOPToString(Expr& node){
     case ET_ARG_LIST: return {defaultColor, "ARGS"};
     case ET_RETURN: return {defaultColor, "RET"};
     case ET_FUNCTION_LIST: return {defaultColor, "FN_LIST"};
-    case ET_CALL: return {defaultColor, "CALL"};
+    case ET_CALL: return {"\033[38;5;207m", "CALL"};
     case ET_STRING: return {defaultColor, "STRING"};
     case ET_INDEX_STR: return {defaultColor, "AT"};
     //nic není pravda
