@@ -9,6 +9,7 @@ fn startswith(what, source){
 
 fn endswith(what, source){
     if(len(what) > len(source)) return 0;
+    if(len(what) == 0) return 1;
     #pouzivam python style zaporne indexy které jsem si přidal
     for(var x = -1; x <= -len(what); x = x - 1){
         if(what[x] != source[x]) return 0;
@@ -77,7 +78,7 @@ fn main(){
     print replaceCharAt(a, -1, "y");
     print replaceCharAt(a, 7, "n");
     
-    return 100;
+    #return 100;
 
     #previous test cases
     var a = "ahoj nejaky _2135/*-+ text" + "\ndalsi text" + ""; #zatim \n nerozpoznava jako newline, to bych tam musel dát asi check na \ a pak n a pak replace
@@ -97,6 +98,7 @@ fn main(){
 
     print contains("g", "this enables bidirectional streaming");
     print endswith("bidi", "hribidi");
+    print startswith("", "ahoj");
     print endswith("", "ahoj"); 
 
     return 0;
@@ -110,6 +112,7 @@ fn main(){
 
     #print t; #t nebyla deklarovana
     t[-37]; #hazi error
+    print "nasleduje dalsiText";
     var dalsiText = a[-1] + a[-2]; # + t[-37];
     print dalsiText;
     var c = 1000; #checks bound checking works
