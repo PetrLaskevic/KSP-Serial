@@ -108,7 +108,7 @@ fn main(){
     print startswith("", "ahoj");
     print endswith("", "ahoj"); 
 
-    return 0;
+    #return 0;
     print startswith("ahoj", a); #1
     print startswith("hrib", "hribidi"); #1
     print startswith("skibd", "skibidi"); #0
@@ -117,23 +117,25 @@ fn main(){
     print startswith(a*2,a); #0
     print startswith("", a); #1
 
-    #print t; #t nebyla deklarovana
-    t[-37]; #hazi error
     print "nasleduje dalsiText";
-    var dalsiText = a[-1] + a[-2]; # + t[-37];
+    var dalsiText = a[-1] + a[-2];
     print dalsiText;
-    var c = 1000; #checks bound checking works
+    var c = 2;
     var b = (a[1] + a[c]) * 2 + "text"; #hohotext
     print b;
     b = b + a[0];
     b = a[0];
     b = a[0] + a[1];
     print b;
-    #var c = 2;
-    #var b = "ha" * 3; 
-    #print b;
-    #print multiply2(multiply2(3,20), 2); #60*2 = 120
-    #print factorial(11); #39916800
+
+    print "ha" * 3;
+    print multiply2(multiply2(3,20), 2); #60*2 = 120
+    print factorial(11); #39916800
+
+    print t; #t nebyla deklarovana
+    t[-37]; #hazi error
+    var c = 1000; #throws an error => checks bound checking works
+    var b = (a[1] + a[c]) * 2 + "text";
 }
 
 #ostatni - ukazuje, co jazyk umi
