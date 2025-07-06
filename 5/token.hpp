@@ -110,6 +110,7 @@ std::string decoratedLine(std::string text, int row, int column){
     }
     segment = seglist[row];
     segment.insert(column, "\u001b[31m"); //ANSI escape code for red
+    //možná column + 5), segment.size() - 1 když teď 1 based?
     size_t resetPosition = std::min(static_cast<size_t>(column + 6), segment.size()); //+7
     segment.insert(resetPosition, "\u001b[0m"); //reset color
     return segment;
@@ -194,6 +195,13 @@ match_operator_token(Scanner &sc) {
     if(sc.match('[')) return Token(TK_L_SQ_BRACKET, "", sc.row, beganTokenAtCol);
     if(sc.match(']')) return Token(TK_R_SQ_BRACKET, "", sc.row, beganTokenAtCol); 
 
+
+    if(sc.match('|') && sc.match('|')){
+      return Token(TK_OR, "", sc.row, beganTokenAtCol);
+    }
+    if(sc.match('&') && sc.match('&')){
+      return Token(TK_AND, "", sc.row, beganTokenAtCol);
+    }
     //no operator matched
     return std::nullopt;
 
@@ -262,12 +270,6 @@ std::optional<Token> match_keyword_or_name_token(Scanner &sc){
     }
     if(keyword_or_name == "while"){
         return Token(TK_WHILE, "", sc.row, beganTokenAtCol);
-    }
-    if(keyword_or_name == "&&"){
-      return Token(TK_AND, "", sc.row, beganTokenAtCol);
-    }
-    if(keyword_or_name == "||"){
-      return Token(TK_OR, "", sc.row, beganTokenAtCol);
     }
     if(keyword_or_name == "fn"){
       return Token(TK_FN, "", sc.row, beganTokenAtCol);
