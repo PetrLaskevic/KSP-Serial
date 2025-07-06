@@ -39,7 +39,14 @@ fn contains(what, source){
 }
 
 #výměna i-tého znaku za jiný znak nebo za string (vloží se místo toho znaku)
-#ano, O(N) protože immutable strings
+#ano, O(N) protože immutable strings - mutable zatím se mi nepodařilo udělat
+#mám nápad, že by na to mohlo stačit mít referenci na `promenne`, mít název proměnné, a pak v případě, že na levé straně assignmentu by se zavolala funkce, která by vrátila čerstvou referenci na i-tý znak
+#(mezitím mohla být realokace, proto bych neuchovával prostý pointer)
+#reference na 0. znak by ale v `promenne` měla být v rámci jedné funkce vždycky ok.
+#=> do volání ostatních funkcí OK, protože by se před voláním dalšího `intepret` prostě hodnota zkopírovala
+#=> pro return taky OK, protože by se kopírovalo
+#jediné, co by chtělo referenci a zápis by byl ten assign, který by byl v rámci jedné funkce
+# => šlo by to takhle?
 fn replaceCharAt(string, index, newChar){
     if(
         (index >= len(string)) ||
