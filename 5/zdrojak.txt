@@ -1,21 +1,32 @@
-fn replaceCharAtOrInsertSubstr(string, index, newChar){
+#výměna i-tého znaku za jiný znak nebo za string (vloží se místo toho znaku)
+fn replaceCharAt(string, index, newChar){
     print "IndexError";
     if(index < 0 ){ 
         print "IndexError";
-        return; #return zatim musi cislo, mohl bych predelat AST, aby tam tu 0 explicitne doplnoval
+        return; #funguje v mem jazyce stejne jako return 0;
     }
     var firstHalf = "";
     for(var x = 0; x < index; x = x + 1){
         firstHalf = firstHalf + string[x];
     }
     var secondHalf = "";
-    for(var x = index; x < len(what); x = x + 1){
-        secondHalf = secondHalf + string[x];
+    #chceme vymenu znaku, nikoli jenom insert na pozici
+    #proto index + 1
+    if(index + 1 < len(string)){
+        for(var x = index + 1; x < len(string); x = x + 1){
+            secondHalf = secondHalf + string[x];
+        }
     }
+    
     return firstHalf + newChar + secondHalf;
 }
 
 #kazdy program musi mit funkci main
 fn main(){
+    var a = "skibidi";
+    a = replaceCharAt(a,0, "h");
+    a = replaceCharAt(a,1, "r");
+    a = replaceCharAt(a, 2, "i");
+    print a;
     return 100;
 }
